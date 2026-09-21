@@ -401,6 +401,10 @@ else if (typeof exports === 'object'){
   .ds-row .ds-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ds-row .del { padding: 4px 9px; font-size: 12px; color: var(--scania-red); flex: 0 0 auto; }
   .ds-row .row-palette { display: inline-flex; gap: 5px; flex-wrap: wrap; }
+
+  /* Lagen: elke laag is een eigen rij; een dikkere rand markeert het begin van een nieuwe test/meting */
+  .ts-table tbody tr.test-group-start td, .meas-table tbody tr.meas-group-start td { border-top: 2px solid var(--scania-blue); }
+
   .ds-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
   .ds-toolbar .grow { flex: 1; }
   .ds-toolbar label { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
@@ -446,7 +450,47 @@ else if (typeof exports === 'object'){
   .table-scroll { max-height: 360px; max-width: 100%; overflow: auto; border-radius: 8px; }
   .table-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
   th.col-hidden, td.col-hidden { opacity: .45; }
-  .hidden { display: none; }
+  .hidden { display: none !important; }
+
+  .laagdik-controls { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  .laagdik-controls label { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .laagdik-controls input[type="number"] { width: 90px; }
+  .ld-allcols-label { align-self: center; }
+  .laagdik-wrap { display: grid; gap: 22px; }
+  .laagdik-block { min-width: 0; }
+  .laagdik-block-title { font-weight: 600; margin-bottom: 8px; color: var(--text); }
+  .laagdik-table-scroll { max-width: 100%; overflow: auto; border-radius: 8px; }
+  .laagdik-table td, .laagdik-table th { text-align: center; font-size: 12px; }
+  .laagdik-table td.ld-empty, .ld-marker-body .ld-empty { color: var(--muted); background: #f9fafc; }
+  .laagdik-table td.ld-yellow, .ld-marker-body .ld-yellow { background: #fff2b2; color: #6b5900; font-weight: 600; }
+  .laagdik-table td.ld-green, .ld-marker-body .ld-green { background: #d7f2df; color: #14663a; font-weight: 600; }
+  .laagdik-table td.ld-red, .ld-marker-body .ld-red { background: #fadadd; color: #9c1024; font-weight: 600; }
+
+  .ld-layout-section { margin-top: 16px; }
+  .ld-layout-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .ld-layout-toolbar .hint { font-size: 12px; color: var(--muted); }
+  .ld-layout-empty { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .ld-layout-canvas { position: relative; display: inline-block; max-width: 100%; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; }
+  .ld-layout-canvas img { display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+  .ld-fs-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 9999;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .ld-fs-canvas { max-width: 96vw; max-height: 92vh; }
+  .ld-fs-canvas img { max-width: 96vw; max-height: 92vh; width: auto; height: auto; }
+  .ld-fs-close {
+    position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,.15); color: #fff;
+    border: none; font-size: 30px; line-height: 1; cursor: pointer; padding: 2px 14px; border-radius: 8px;
+  }
+  .ld-fs-close:hover { background: rgba(255,255,255,.3); }
+  .ld-marker { position: absolute; box-sizing: border-box; border: 1px solid #333; background: rgba(255,255,255,.88); font-size: 10px; overflow: hidden; }
+  .ld-marker-head { background: #f58231; color: #fff; font-weight: 700; text-align: center; padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ld-marker-body > div { text-align: center; padding: 1px 2px; border-top: 1px solid rgba(0,0,0,.08); }
+  .ld-marker.ld-editing { cursor: move; box-shadow: 0 0 0 2px #4363d8; }
+  .ld-marker.ld-editing:focus { outline: none; box-shadow: 0 0 0 2px #e6194b; }
+  .ld-marker-resize { position: absolute; right: -4px; bottom: -4px; width: 10px; height: 10px; background: #4363d8; border-radius: 2px; cursor: nwse-resize; }
+  .ld-layout-add { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .ld-layout-add select { max-width: 220px; }
 
   /* Onthullen van een paneel zodra er data is */
   .panel.reveal { animation: panelReveal .5s cubic-bezier(.16, 1, .3, 1) both; }
@@ -461,17 +505,20 @@ else if (typeof exports === 'object'){
   /* ===== Testset & instellingen ===== */
   .ts-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px; }
   .ts-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
-  .ts-field input, .ts-field textarea {
+  .ts-field input, .ts-field textarea, .ts-field select {
     font: inherit; font-size: 14px; color: var(--text);
     padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; resize: vertical;
   }
   .ts-field input.locked { background: #f4f6f9; color: var(--muted); cursor: pointer; }
+  .type-toggle-group { display: flex; align-items: center; gap: 14px; height: 36px; }
   .ts-scroll { max-width: 100%; overflow: auto; border-radius: 8px; }
   .ts-table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  .ts-table th, .ts-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; white-space: nowrap; }
+  .ts-table th, .ts-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; white-space: nowrap; vertical-align: middle; }
   .ts-table th { background: #f4f6f9; color: var(--scania-blue); font-weight: 600; }
-  .ts-table td.ts-testname { display: flex; align-items: center; gap: 8px; max-width: 240px; }
-  .ts-table td.ts-testname .ds-dot { width: 12px; height: 12px; }
+  /* display:flex rechtstreeks op een td met rowspan verschuift kolommen in browsers; daarom op een wrapper. */
+  .ts-table td.ts-testname { max-width: 240px; }
+  .ts-table td.ts-testname .name-wrap { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+  .ts-table td.ts-testname .ds-dot { width: 12px; height: 12px; flex: 0 0 auto; }
   .ts-table td.ts-testname .nm { overflow: hidden; text-overflow: ellipsis; }
   .ts-table input { font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; width: 100%; min-width: 90px; }
   .ts-table input.num { text-align: right; }
@@ -489,7 +536,7 @@ else if (typeof exports === 'object'){
 
   /* ===== Database-overzicht (metingen) ===== */
   .db-filter { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 14px; margin-bottom: 14px; align-items: end; }
-  .db-filter .ts-field input { width: 100%; }
+  .db-filter .ts-field input, .db-filter .ts-field select { width: 100%; }
   .db-filter .ts-copy { align-self: end; height: 34px; }
   .db-filter .oke-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); }
   .db-filter .oke-toggle input { width: auto; }
@@ -536,6 +583,9 @@ else if (typeof exports === 'object'){
   .modal-note { margin: 0; font-size: 12px; color: var(--muted); }
   .modal-body .ts-field input, .modal-body .ts-field textarea { width: 100%; box-sizing: border-box; }
   .modal-body .ts-field input.invalid { border-color: var(--scania-red); }
+  .modal-meta .ts-field-inline { justify-content: flex-end; }
+  .modal-meta .oke-toggle { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text); height: 36px; }
+  .modal-meta .oke-toggle input { width: auto; }
   .modal-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; padding: 0 18px 16px; }
   .modal-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid var(--scania-blue); background: #fff; color: var(--scania-blue); cursor: pointer; font-size: 14px; font-weight: 600; }
   .modal-btn.primary { background: var(--scania-blue); color: #fff; }
@@ -557,16 +607,19 @@ else if (typeof exports === 'object'){
     .chart-wrap { height: clamp(300px, 58vh, 620px); }
   }
 
-  /* Views sidebar */
-  #viewsToggle {
+  /* Linker tab-stack: Overview boven Views */
+  #leftTabs {
     position: fixed; top: 50%; left: 0; transform: translateY(-50%);
-    z-index: 60; background: var(--scania-blue); color: #fff; border: none;
+    z-index: 60; display: flex; flex-direction: column; gap: 8px;
+  }
+  #leftTabs button {
+    background: var(--scania-blue); color: #fff; border: none;
     cursor: pointer; border-radius: 0 12px 12px 0; padding: 22px 12px;
     box-shadow: 2px 2px 10px rgba(0,0,0,.18); font-weight: 700; font-size: 16px;
     letter-spacing: .6px; transition: background .15s;
   }
-  #viewsToggle:hover { background: var(--scania-blue-2); }
-  #viewsToggle span { writing-mode: vertical-rl; transform: rotate(180deg); }
+  #leftTabs button:hover { background: var(--scania-blue-2); }
+  #leftTabs button span { writing-mode: vertical-rl; transform: rotate(180deg); }
   #viewsBackdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.32); z-index: 70;
     opacity: 0; pointer-events: none; transition: opacity .3s;
@@ -619,6 +672,34 @@ else if (typeof exports === 'object'){
   .view-row .view-del { background: none; border: none; color: #b00; cursor: pointer; font-size: 15px; padding: 0 2px; line-height: 1; }
   .view-row .view-del:hover { color: var(--scania-red); }
 
+  /* Overview sidebar (zelfde mechaniek als Views, maar breder) */
+  #overviewBackdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.32); z-index: 70;
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  #overviewBackdrop.open { opacity: 1; pointer-events: auto; }
+  #overviewPanel {
+    position: fixed; top: 0; left: -95vw; width: min(95vw, 1200px); height: 100%;
+    background: #fff; z-index: 80; box-shadow: 3px 0 18px rgba(0,0,0,.22);
+    display: flex; flex-direction: column;
+    transition: left .32s cubic-bezier(.16,1,.3,1);
+  }
+  #overviewPanel.open { left: 0; }
+  .ov-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ov-table th, .ov-table td { border: 1px solid #e2e5ea; padding: 6px 8px; text-align: left; vertical-align: middle; }
+  .ov-table th { background: #f2f4f7; position: sticky; top: 0; }
+  .ov-table tbody tr { cursor: pointer; }
+  .ov-table tbody tr:hover { background: #f8f9fb; }
+  .ov-table input { width: 100%; box-sizing: border-box; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; font-size: 13px; background: transparent; }
+  .ov-table input:hover, .ov-table input:focus { border-color: #cfd4dc; background: #fff; }
+  .ov-table .ov-oke {
+    width: 26px; height: 26px; border-radius: 6px; border: none; cursor: pointer;
+    color: #fff; font-size: 15px; font-weight: 700; line-height: 1;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .ov-table .ov-oke.ok { background: #14663a; }
+  .ov-table .ov-oke.bad { background: var(--scania-red); }
+
   /* Melding wanneer de app binnen Teams (ingebed) draait: bewerken kan alleen in de browser. */
   .embed-banner {
     position: sticky; top: 0; z-index: 90;
@@ -642,7 +723,10 @@ else if (typeof exports === 'object'){
   <span>Je gebruikt de app binnen Teams. Bewerken en opslaan van de gedeelde database werkt alleen in de browser.</span>
   <button id="openBrowserBtn" type="button">Openen in browser</button>
 </div>
-<button id="viewsToggle" title="Views openen"><span>Views</span></button>
+<div id="leftTabs">
+  <button id="overviewToggle" title="Overview openen"><span>Overview</span></button>
+  <button id="viewsToggle" title="Views openen"><span>Views</span></button>
+</div>
 <div id="viewsBackdrop"></div>
 <aside id="viewsPanel" aria-label="Views">
   <div class="views-head">
@@ -663,6 +747,25 @@ else if (typeof exports === 'object'){
     </div>
     <div id="viewsList"></div>
     <div id="viewsEmpty" class="views-empty">Nog geen views opgeslagen.</div>
+  </div>
+</aside>
+<div id="overviewBackdrop"></div>
+<aside id="overviewPanel" aria-label="Overview">
+  <div class="views-head">
+    <h2>Overview</h2>
+    <button id="overviewClose" title="Sluiten">&times;</button>
+  </div>
+  <div class="views-body">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Testset-ID</th><th>Datum</th><th>SBG</th><th>Test-type</th><th>Oké</th>
+          <th>Parts</th><th>Batch No</th><th>Beschrijving</th><th>Lakgroep</th>
+        </tr>
+      </thead>
+      <tbody id="overviewBody"></tbody>
+    </table>
+    <div id="overviewEmpty" class="views-empty">Nog geen testsets in de database.</div>
   </div>
 </aside>
 <header>
@@ -693,12 +796,15 @@ else if (typeof exports === 'object'){
     <summary>Database &mdash; metingen</summary>
     <div class="panel-body">
       <div class="db-filter">
+        <label class="ts-field"><span>Testset-ID</span><input type="text" id="fltTestsetId" placeholder="filter…"></label>
         <label class="ts-field"><span>Project</span><input type="text" id="fltProject" placeholder="filter…"></label>
         <label class="ts-field"><span>Naam testset</span><input type="text" id="fltName" placeholder="filter…"></label>
         <label class="ts-field"><span>Lijn</span><input type="text" id="fltLijn" placeholder="filter…"></label>
+        <label class="ts-field"><span>Type</span><select id="fltTestType"><option value="">Alle</option><option value="brush">Brush</option><option value="overlap">Overlap</option><option value="laagdiktestrips">Laagdiktestrips</option></select></label>
         <label class="ts-field"><span>Kleurnummer</span><input type="text" id="fltColorNr" placeholder="filter…"></label>
         <label class="ts-field"><span>Kleur-naam</span><input type="text" id="fltKleurNaam" placeholder="filter…"></label>
         <label class="ts-field"><span>Leverancier</span><input type="text" id="fltLeverancier" placeholder="filter…"></label>
+        <label class="ts-field"><span>Lakgroep</span><input type="text" id="fltLakgroep" placeholder="filter…"></label>
         <label class="ts-field"><span>Aangemaakt van</span><input type="text" id="fltDateFrom" inputmode="numeric" maxlength="10" placeholder="dd/mm/jjjj"></label>
         <label class="ts-field"><span>Aangemaakt tot</span><input type="text" id="fltDateTo" inputmode="numeric" maxlength="10" placeholder="dd/mm/jjjj"></label>
         <label class="ts-field"><span>Programma</span><input type="text" id="fltProgramma" placeholder="filter…"></label>
@@ -706,6 +812,7 @@ else if (typeof exports === 'object'){
         <label class="ts-field"><span>LL1</span><input type="text" id="fltLl1" placeholder="filter…"></label>
         <label class="ts-field"><span>LL2</span><input type="text" id="fltLl2" placeholder="filter…"></label>
         <label class="ts-field"><span>rpm</span><input type="text" id="fltRpm" placeholder="filter…"></label>
+        <label class="ts-field"><span>Aantal lagen</span><input type="text" id="fltNumLayers" placeholder="filter…"></label>
         <label class="ts-field flt-oke"><span>Ok&eacute;-status</span><label class="oke-toggle"><input type="checkbox" id="fltOke">ook niet-ok&eacute; tonen</label></label>
         <button id="fltClearBtn" class="ts-copy" type="button">Filters wissen</button>
       </div>
@@ -766,6 +873,18 @@ else if (typeof exports === 'object'){
     <div id="chartEmpty" class="empty">Laad een of meer Excel-bestanden om de grafiek te tonen.</div>
   </div>
 
+  <div class="panel hidden" id="laagdikPanel">
+    <div id="laagdikTitle" class="testset-title hidden"></div>
+    <h2>Laagdiktestrips &mdash; resultaten</h2>
+    <div class="laagdik-controls">
+      <label>Min (&micro;m) <input type="number" id="ldMinInput" step="any"></label>
+      <label>Max (&micro;m) <input type="number" id="ldMaxInput" step="any"></label>
+      <label class="ld-allcols-label"><input type="checkbox" id="ldShowAllCols"> Toon alle kolommen</label>
+    </div>
+    <div id="laagdikWrap" class="laagdik-wrap"></div>
+    <div id="laagdikEmpty" class="empty">Laad een laagdiktestrips-bestand om de resultaten te tonen.</div>
+  </div>
+
   <details class="panel hidden" id="tablePanel">
     <summary>Waardes</summary>
     <div class="panel-body">
@@ -787,13 +906,24 @@ const COLUMN = "A";
 // 10 goed onderscheidbare kleuren
 const PALETTE = ["#e6194b", "#f58231", "#3cb44b", "#469990", "#42d4f4", "#4363d8", "#911eb4", "#f032e6", "#9a6324", "#000000"];
 
-// datasets: [{ name, values: number[], color, hidden, settings }]
+// datasets: [{ name, values: number[] (brush/overlap) of { labels, rows } (laagdiktestrips), color, hidden, settings }]
 // settings: { programma, fm, ll1, ll2, rpm }
 const datasets = [];
-let testset = { name: "", description: "", kleurnummer: "", lijn: "", project: "", kleurNaam: "", kleurLeverancier: "" };
+let testset = { name: "", description: "", kleurnummer: "", lijn: "", project: "", kleurNaam: "", kleurLeverancier: "", kleurLakgroep: "", numLayers: 2, sameLayerSettings: true, testType: "overlap", minThickness: "35", maxThickness: "45", skidType: "", parts: "", batchNo: "", oke: true };
 let datasetsSaved = true;     // false zodra geladen data nog niet in de database staat
 let chart = null;
 let analysisMode = "overlap"; // "overlap" | "brush"
+
+// Normaliseert een testType-waarde uit de database/UI naar één van de 3 bekende typen.
+function normalizeTestType(t) {
+  return t === "brush" || t === "laagdiktestrips" ? t : "overlap";
+}
+
+// SBG-standaardwaarde: bij overlap/brush altijd "B1", bij laagdiktestrips het (uit het bestand gelezen) skid type.
+function defaultSbg(testType, skidType) {
+  if (skidType) return skidType;
+  return normalizeTestType(testType) !== "laagdiktestrips" ? "B1" : "";
+}
 let currentViewId = null;     // id van de momenteel geopende view, of null
 let colorMode = false;        // toon per-rij kleurpaletten
 
@@ -817,9 +947,28 @@ const SETTING_FIELDS = [
   { key: "rpm", label: "rpm", type: "number" },
 ];
 function emptySettings() { return { programma: "", fm: "", ll1: "", ll2: "", rpm: "", oke: true }; }
+function emptyLayer(kleurnummer) { return { programma: "", fm: "", ll1: "", ll2: "", rpm: "", kleurnummer: kleurnummer || "" }; }
+// Vult/kort het lagen-array in tot lengte n, geseed met de gedeelde instellingen als startwaarde.
+function defaultLayers(n, layers, baseSettings, kleurnummer) {
+  const result = (layers || []).slice(0, n);
+  while (result.length < n) {
+    const base = baseSettings || emptySettings();
+    result.push({
+      programma: base.programma || "", fm: base.fm || "", ll1: base.ll1 || "",
+      ll2: base.ll2 || "", rpm: base.rpm || "", kleurnummer: kleurnummer || "",
+    });
+  }
+  return result;
+}
 
 const LIJN_DEFAULTS = ["T1", "T2", "T3", "T9"];
 let kleurMap = {};            // kleurnummer -> { naam, leverancier }
+
+// Afbeelding+marker-layout per skid-type (gedeeld, opgeslagen in skid_layout-tabel).
+// skidType -> { imageUrl, mime, markers: [{ label, xPct, yPct, wPct, hPct, rotationDeg }] }
+let skidLayouts = {};
+// Actieve "layout bewerken"-sessie, of null: { skidType, datasetRef, markers, pendingImageBytes, pendingImageMime, previewUrl }
+let layoutEdit = null;
 
 const fileInput = document.getElementById("fileInput");
 const clearBtn = document.getElementById("clearBtn");
@@ -830,6 +979,13 @@ const chartEmpty = document.getElementById("chartEmpty");
 const chartTip = document.getElementById("chartTip");
 const chartPanel = document.getElementById("chartPanel");
 const tablePanel = document.getElementById("tablePanel");
+const laagdikPanel = document.getElementById("laagdikPanel");
+const laagdikTitle = document.getElementById("laagdikTitle");
+const laagdikWrap = document.getElementById("laagdikWrap");
+const laagdikEmpty = document.getElementById("laagdikEmpty");
+const ldMinInput = document.getElementById("ldMinInput");
+const ldMaxInput = document.getElementById("ldMaxInput");
+const ldShowAllCols = document.getElementById("ldShowAllCols");
 const dataTable = document.getElementById("dataTable");
 const dsPanel = document.getElementById("dsPanel");
 const dsList = document.getElementById("dsList");
@@ -863,17 +1019,21 @@ const fltDateFrom = document.getElementById("fltDateFrom");
 const fltDateTo = document.getElementById("fltDateTo");
 const fltOke = document.getElementById("fltOke");
 const filterInputs = {
+  testsetId: document.getElementById("fltTestsetId"),
   name: document.getElementById("fltName"),
   kleurnummer: document.getElementById("fltColorNr"),
   project: document.getElementById("fltProject"),
   lijn: document.getElementById("fltLijn"),
+  testType: document.getElementById("fltTestType"),
   kleurNaam: document.getElementById("fltKleurNaam"),
   leverancier: document.getElementById("fltLeverancier"),
+  lakgroep: document.getElementById("fltLakgroep"),
   programma: document.getElementById("fltProgramma"),
   fm: document.getElementById("fltFm"),
   ll1: document.getElementById("fltLl1"),
   ll2: document.getElementById("fltLl2"),
   rpm: document.getElementById("fltRpm"),
+  numLayers: document.getElementById("fltNumLayers"),
 };
 
 fileInput.addEventListener("change", onFiles);
@@ -923,6 +1083,11 @@ function setMode(mode) {
   renderSummary();
 }
 
+// Zet de Samenvatting-toggle (Overlap/Brush) automatisch op het testType van de geladen/opgeslagen testset.
+function syncAnalysisModeToTestType() {
+  if (testset.testType === "brush" || testset.testType === "overlap") setMode(testset.testType);
+}
+
 // --- Views sidebar ---
 const viewsToggle = document.getElementById("viewsToggle");
 const viewsPanel = document.getElementById("viewsPanel");
@@ -950,6 +1115,20 @@ document.getElementById("vwSave").addEventListener("click", () => {
   hideAddViewForm();
   closeViews();
 });
+
+// --- Overview sidebar ---
+const overviewToggle = document.getElementById("overviewToggle");
+const overviewPanel = document.getElementById("overviewPanel");
+const overviewBackdrop = document.getElementById("overviewBackdrop");
+const overviewClose = document.getElementById("overviewClose");
+const overviewBody = document.getElementById("overviewBody");
+const overviewEmpty = document.getElementById("overviewEmpty");
+
+function openOverview() { overviewPanel.classList.add("open"); overviewBackdrop.classList.add("open"); }
+function closeOverview() { overviewPanel.classList.remove("open"); overviewBackdrop.classList.remove("open"); }
+overviewToggle.addEventListener("click", () => { openOverview(); renderOverview(); });
+overviewClose.addEventListener("click", closeOverview);
+overviewBackdrop.addEventListener("click", closeOverview);
 
 function buildPalette(container, current, onPick) {
   container.innerHTML = "";
@@ -981,10 +1160,35 @@ async function onFiles(ev) {
   fileInput.value = ""; // sta toe hetzelfde bestand opnieuw te kiezen
   clearMessages();
   let added = 0;
+  // Zodra er al data geladen is, bepaalt die het "soort" (laagdiktestrips of plaatmeting) van deze batch.
+  let kind = datasets.length ? (testset.testType === "laagdiktestrips" ? "laagdiktestrips" : "plaat") : null;
   for (const file of files) {
     try {
-      const values = await processFile(file);
-      datasets.push({ name: file.name, values, color: PALETTE[datasets.length % PALETTE.length], hidden: false, settings: emptySettings() });
+      const result = await processFile(file);
+      if (kind != null && kind !== result.kind) {
+        throw new Error("kan laagdiktestrips en plaatmetingen niet combineren in dezelfde import");
+      }
+      kind = result.kind;
+      if (result.kind === "laagdiktestrips") {
+        testset.testType = "laagdiktestrips";
+        if (testset.minThickness === "" || testset.minThickness == null) testset.minThickness = "35";
+        if (testset.maxThickness === "" || testset.maxThickness == null) testset.maxThickness = "45";
+        // Eén bestand kan meerdere skid-zijdes bevatten (bv. voor-/achterkant): elke zijde wordt een eigen dataset/blok.
+        result.data.forEach((grid) => {
+          datasets.push({
+            name: result.data.length > 1 ? `${file.name} (${grid.skidType})` : file.name,
+            sourceFile: file.name,
+            skidType: grid.skidType,
+            values: grid, color: PALETTE[datasets.length % PALETTE.length], hidden: false,
+            settings: emptySettings(), layers: [],
+          });
+        });
+      } else {
+        datasets.push({
+          name: file.name, sourceFile: file.name, values: result.data, color: PALETTE[datasets.length % PALETTE.length], hidden: false,
+          settings: emptySettings(), layers: [],
+        });
+      }
       added++;
     } catch (err) {
       showMessage(`✗ ${file.name}: ${err.message}`, "err");
@@ -1005,13 +1209,152 @@ function processFile(file) {
     reader.onload = () => {
       try {
         const wb = XLSX.read(new Uint8Array(reader.result), { type: "array" });
-        resolve(computeAverages(wb));
+        const skids = findSkidSheets(wb);
+        if (skids) {
+          resolve({ kind: "laagdiktestrips", data: skids.map((skid) => parseLaagdiktestrips(wb, skid)) });
+        } else {
+          resolve({ kind: "plaat", data: computeAverages(wb) });
+        }
       } catch (e) {
-        reject(new Error("geen geldig Excel-bestand"));
+        reject(new Error(e && e.message ? e.message : "geen geldig Excel-bestand"));
       }
     };
     reader.readAsArrayBuffer(file);
   });
+}
+
+// Herkent laagdiktestrips-skid-export(en): een tabblad "<prefix>Skid[N]" met bijbehorend
+// "<prefix>SkidData[N]" tabblad (bv. "CSkid"+"CSkidData", of "USkid1"+"USkidData1" samen met
+// "USkid2"+"USkidData2" voor voor-/achterkant-varianten van hetzelfde skid-type). Retourneert een
+// array (één entry per gevonden zijde) of null als er geen skid-tabbladen zijn. Zijde "1"
+// (of geen cijfer) is de voorkant/standaard-naam; zijde "2" wordt "<prefix>-Achterkant", enz.
+function findSkidSheets(wb) {
+  const found = [];
+  for (const n of wb.SheetNames) {
+    const m = /^(.+?)Skid(\d*)$/i.exec(n);
+    if (m && wb.SheetNames.includes(m[1] + "SkidData" + m[2])) {
+      const suffix = m[2];
+      const sideLabel = suffix === "" || suffix === "1" ? "" : (suffix === "2" ? "-Achterkant" : "-" + suffix);
+      found.push({ skidType: m[1] + sideLabel, skidSheetName: n, skidDataSheetName: m[1] + "SkidData" + suffix });
+    }
+  }
+  return found.length ? found : null;
+}
+
+// Zoekt het tabblad waarvan een cel-formule verwijst naar "<skidSheetName>!" — dit is het
+// "Data"-overzichtblad dat bij deze skid-zijde hoort (bij één zijde heet dit gewoon "Data", bij
+// meerdere zijdes maakt Excel er bv. "Data (2)" van; de naam zelf doet er dus niet toe).
+function findAnchorDataSheet(wb, skidSheetName) {
+  const marker = skidSheetName + "!";
+  for (const n of wb.SheetNames) {
+    const ws = wb.Sheets[n];
+    if (!ws || !ws["!ref"]) continue;
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const cell = ws[XLSX.utils.encode_cell({ r, c })];
+        if (cell && cell.f && cell.f.indexOf(marker) !== -1) return n;
+      }
+    }
+  }
+  return null;
+}
+
+function reEscape(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const LAAGDIK_MIN_CAL = -7;
+const LAAGDIK_MAX_CAL = 7;
+
+// Leest laagdiktestrips-data door de formuleketen Data -> <skid> -> <skid>Data te volgen (i.p.v. vaste
+// rij/kolom-aannames): elke positie-kolom in "Data" verwijst naar een rij in "<skid>", en die rij-formule
+// verwijst op zijn beurt naar de echte calibratie-rij en eerste meetrij in "<skid>Data". Calibratiewaardes
+// buiten -7..7 worden als 0 behandeld (fout/uitschieter) i.p.v. toegepast. De calibratierij zelf wordt
+// niet als aparte positie weergegeven — hij wordt alleen gebruikt om de andere rijen te corrigeren.
+function parseLaagdiktestrips(wb, skid) {
+  const dataSheetName = findAnchorDataSheet(wb, skid.skidSheetName);
+  if (!dataSheetName) throw new Error(`geen overzichtblad gevonden dat naar "${skid.skidSheetName}" verwijst`);
+  const dataWs = wb.Sheets[dataSheetName];
+  const skidWs = wb.Sheets[skid.skidSheetName];
+  const skidDataWs = wb.Sheets[skid.skidDataSheetName];
+  if (!dataWs) throw new Error(`tabblad "${dataSheetName}" ontbreekt`);
+  if (!skidWs) throw new Error(`tabblad "${skid.skidSheetName}" ontbreekt`);
+  if (!skidDataWs) throw new Error(`tabblad "${skid.skidDataSheetName}" ontbreekt`);
+
+  const range = XLSX.utils.decode_range(dataWs["!ref"]);
+  // Zoek de eerste rij met een formule die naar "<skid>!" verwijst; alles erboven is header.
+  let firstDataRow = -1;
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const cell = dataWs[XLSX.utils.encode_cell({ r, c: range.s.c })];
+    if (cell && cell.f && cell.f.indexOf(skid.skidSheetName + "!") !== -1) { firstDataRow = r; break; }
+  }
+  if (firstDataRow === -1) throw new Error(`geen meetformules gevonden in tabblad "${dataSheetName}"`);
+  const codeRow = Math.max(range.s.r, firstDataRow - 3);
+  const numberRow = codeRow + 1;
+
+  const formulaRe = new RegExp(reEscape(skid.skidSheetName) + "!([A-Z]+)(\\d+):[A-Z]+\\d+");
+  const chainRe = new RegExp(
+    reEscape(skid.skidDataSheetName) + "!([A-Z]+)(\\d+)-" + reEscape(skid.skidDataSheetName) + "!\\1\\$(\\d+)"
+  );
+
+  const labels = [];
+  const positions = []; // { colStart, calibRow0, dataRow0 } of null per kolom
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const codeCell = dataWs[XLSX.utils.encode_cell({ r: codeRow, c })];
+    if (!codeCell || codeCell.v === "" || codeCell.v == null || codeCell.v === "min") break;
+    const numCell = dataWs[XLSX.utils.encode_cell({ r: numberRow, c })];
+    labels.push(String(numCell && numCell.v != null ? numCell.v : c - range.s.c + 1) + " · " + String(codeCell.v));
+
+    const fCell = dataWs[XLSX.utils.encode_cell({ r: firstDataRow, c })];
+    const m = fCell && fCell.f && fCell.f.match(formulaRe);
+    if (!m) { positions.push(null); continue; }
+    const colStart = XLSX.utils.decode_col(m[1]);
+    const skidRow0 = parseInt(m[2], 10) - 1;
+
+    const skidCell = skidWs[XLSX.utils.encode_cell({ r: skidRow0, c: colStart })];
+    const cm = skidCell && skidCell.f && skidCell.f.match(chainRe);
+    if (!cm) { positions.push(null); continue; }
+
+    // Bepaal tot waar de "Data"-formule voor DEZE kolom daadwerkelijk doorloopt: los van het totale
+    // sheet-bereik (dat door losstaande inhoud verderop veel verder kan reiken, bv. bij duurtests met
+    // periodieke hermetingen die niet via dit formuletemplate lopen). De laatste rij is een
+    // sjabloon-restant (geen echte meting) en wordt overgeslagen.
+    let lastFormulaRow = firstDataRow;
+    for (let r = firstDataRow + 1; r <= range.e.r; r++) {
+      const cell = dataWs[XLSX.utils.encode_cell({ r, c })];
+      if (cell && cell.f && cell.f.indexOf(skid.skidSheetName + "!") !== -1) lastFormulaRow = r; else break;
+    }
+    positions.push({
+      colStart,
+      dataRow0: parseInt(cm[2], 10) - 1,
+      calibRow0: parseInt(cm[3], 10) - 1,
+      numSlots: lastFormulaRow - firstDataRow,
+    });
+  }
+
+  const numSlots = positions.reduce((mx, pos) => (pos ? Math.max(mx, pos.numSlots) : mx), 0);
+  const rows = [];
+  for (let slot = 0; slot < numSlots; slot++) {
+    rows.push(positions.map((pos) => (pos && slot < pos.numSlots ? laagdikCellValue(skidDataWs, pos.colStart, pos.calibRow0, pos.dataRow0 + slot) : null)));
+  }
+
+  return { skidType: skid.skidType, labels, rows };
+}
+
+// Gemiddelde van de 3 kolommen van een positie (ruw - calibratie), calibratie buiten -7..7 geldt als 0.
+// Retourneert null als geen van de 3 kolommen op deze rij een numerieke meting bevat (lege rij).
+function laagdikCellValue(skidDataWs, colStart, calibRow0, row0) {
+  const parts = [];
+  for (let cc = colStart; cc <= colStart + 2; cc++) {
+    const rawCell = skidDataWs[XLSX.utils.encode_cell({ r: row0, c: cc })];
+    if (!rawCell || typeof rawCell.v !== "number") continue;
+    const calibCell = skidDataWs[XLSX.utils.encode_cell({ r: calibRow0, c: cc })];
+    let calib = calibCell && typeof calibCell.v === "number" ? calibCell.v : 0;
+    if (calib < LAAGDIK_MIN_CAL || calib > LAAGDIK_MAX_CAL) calib = 0;
+    parts.push(rawCell.v - calib);
+  }
+  return parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : null;
 }
 
 function readColumn(ws, sheetName) {
@@ -1065,18 +1408,24 @@ function render() {
   const viewOpen = currentViewId != null && datasets.length > 0;
   saveViewBtn.classList.toggle("hidden", !viewOpen);
   const hasData = datasets.length > 0;
+  const isLaagdik = testset.testType === "laagdiktestrips";
   chartEmpty.style.display = hasData ? "none" : "block";
   if (!hasData) chartTip.classList.add("hidden");
-  revealPanel(chartPanel, hasData);
-  revealPanel(tablePanel, hasData);
+  revealPanel(chartPanel, hasData && !isLaagdik);
+  revealPanel(tablePanel, hasData && !isLaagdik);
+  revealPanel(laagdikPanel, hasData && isLaagdik);
   revealPanel(dsPanel, hasData);
-  revealPanel(summaryPanel, hasData);
+  revealPanel(summaryPanel, hasData && !isLaagdik);
   dbPanel.classList.toggle("hidden", !appDb);
   updateTestsetTitle();
   renderDatasetList();
-  renderSummary();
-  renderChart();
-  renderTable();
+  if (isLaagdik) {
+    renderLaagdikTabel();
+  } else {
+    renderSummary();
+    renderChart();
+    renderTable();
+  }
 }
 
 function updateTestsetTitle() {
@@ -1099,21 +1448,51 @@ function kleurKey(v) {
   return Number.isFinite(n) ? String(n) : s.toLowerCase();
 }
 
-// Vult Naam + Leverancier automatisch in als het kleurnummer al bekend is en zet ze op read-only.
-function applyKleurLookup(numInput, naamInput, levInput) {
-  const key = kleurKey(numInput.value);
-  const known = key && kleurMap[key];
-  if (known) {
-    naamInput.value = known.naam || "";
-    levInput.value = known.leverancier || "";
-    testset.kleurNaam = naamInput.value;
-    testset.kleurLeverancier = levInput.value;
-    setKleurLock(naamInput, true);
-    setKleurLock(levInput, true);
-  } else {
-    setKleurLock(naamInput, false);
-    setKleurLock(levInput, false);
-  }
+// Koppelt een Kleurnr/Kleur-naam/Leverancier/Lakgroep-rij in een instellingen-tabel: vult naam+
+// leverancier+lakgroep automatisch aan (en vergrendelt ze) bij een bekend kleurnummer. `syncGroup`
+// (optioneel) is een array van andere {kleurInp,naamInp,levInp,lakInp}-rijen die dezelfde
+// testset-brede kleur delen (brush/overlap: elke test heeft zijn eigen rij-elementen, maar ze
+// tonen/bewerken allemaal dezelfde waarde) en worden live gesynchroniseerd bij een wijziging.
+function bindKleurRow(kleurInp, naamInp, levInp, lakInp, target, syncGroup) {
+  const syncToGroup = () => {
+    if (!syncGroup) return;
+    syncGroup.forEach((row) => {
+      if (row.kleurInp === kleurInp) return;
+      row.kleurInp.value = kleurInp.value;
+      row.naamInp.value = naamInp.value;
+      row.levInp.value = levInp.value;
+      row.lakInp.value = lakInp.value;
+      setKleurLock(row.naamInp, naamInp.readOnly);
+      setKleurLock(row.levInp, levInp.readOnly);
+      setKleurLock(row.lakInp, lakInp.readOnly);
+    });
+  };
+  const applyLookup = (initial) => {
+    target.kleurnummer = kleurInp.value;
+    const key = kleurKey(kleurInp.value);
+    const known = key && kleurMap[key];
+    if (known) {
+      naamInp.value = known.naam || "";
+      levInp.value = known.leverancier || "";
+      lakInp.value = known.lakgroep || "";
+      target.kleurNaam = naamInp.value;
+      target.kleurLeverancier = levInp.value;
+      target.kleurLakgroep = lakInp.value;
+      setKleurLock(naamInp, true);
+      setKleurLock(levInp, true);
+      setKleurLock(lakInp, true);
+    } else {
+      setKleurLock(naamInp, false);
+      setKleurLock(levInp, false);
+      setKleurLock(lakInp, false);
+    }
+    if (!initial) syncToGroup();
+  };
+  kleurInp.addEventListener("input", () => applyLookup(false));
+  naamInp.addEventListener("input", () => { target.kleurNaam = naamInp.value; syncToGroup(); });
+  levInp.addEventListener("input", () => { target.kleurLeverancier = levInp.value; syncToGroup(); });
+  lakInp.addEventListener("input", () => { target.kleurLakgroep = lakInp.value; syncToGroup(); });
+  applyLookup(true);
 }
 
 // Zet een kleur-veld op read-only (bekend nummer) of vrij; klikken op een vergrendeld
@@ -1127,7 +1506,7 @@ function setKleurLock(input, locked) {
         if (!input.readOnly) return;
         if (await confirmDialog({
           title: "Kleurwaarde overschrijven",
-          message: "Dit kleurnummer is al gekoppeld aan een naam en leverancier.\nWeet je zeker dat je de opgeslagen waarde wilt overschrijven?",
+          message: "Dit kleurnummer is al gekoppeld aan een naam en leverancier. Als je dit wijzigt, verandert dit voor alle metingen die dit kleurnummer gebruiken.\nWeet je zeker dat je de opgeslagen waarde wilt overschrijven?",
           confirmText: "Overschrijven",
         })) {
           input.readOnly = false;
@@ -1149,9 +1528,9 @@ function refreshDatalists() {
   const projects = new Set();
   const lijnen = new Set(LIJN_DEFAULTS);
   if (appDb) {
-    const kres = appDb.exec("SELECT nummer, naam, leverancier FROM kleur");
+    const kres = appDb.exec("SELECT nummer, naam, leverancier, lakgroep FROM kleur");
     if (kres.length) {
-      kres[0].values.forEach((r) => { kleurMap[kleurKey(r[0])] = { naam: r[1] || "", leverancier: r[2] || "" }; });
+      kres[0].values.forEach((r) => { kleurMap[kleurKey(r[0])] = { naam: r[1] || "", leverancier: r[2] || "", lakgroep: r[3] || "" }; });
     }
     const tres = appDb.exec("SELECT DISTINCT project, lijn FROM testset");
     if (tres.length) {
@@ -1171,57 +1550,182 @@ function refreshDatalists() {
 }
 
 // Bouwt de instellingen-tabel (per meting) in het opgegeven table-element.
-function fillTsTable(tableEl, list = datasets) {
+// layerConfig = { numLayers, sameLayerSettings, kleurnummer } bepaalt of er één instellingen-groep is
+// (zelfde instelling) of één groep kolommen per laag (afwijkende instellingen).
+function fillTsTable(tableEl, list = datasets, layerConfig = null) {
   if (!list.length) { tableEl.innerHTML = ""; return; }
+  const numLayers = Math.max(1, (layerConfig && layerConfig.numLayers) || 2);
+  const sameLayerSettings = !layerConfig || layerConfig.sameLayerSettings !== false;
+  // Laagdiktestrips gebruikt geen machine-instellingen (FM/LL1/LL2/rpm), alleen Programma.
+  const isLaagdik = !!layerConfig && layerConfig.testType === "laagdiktestrips";
+  const fields = isLaagdik ? SETTING_FIELDS.filter((f) => f.key === "programma") : SETTING_FIELDS;
+  // Alleen bij laagdiktestrips gelden instellingen+kleur voor de HELE testset als 1 gedeelde rij
+  // (rowSpan). Brush/overlap houdt de oude situatie aan: elke test heeft zijn eigen instellingen-
+  // rij (bewust dubbel, per test apart in te stellen); kleur/lakgroep blijft daar wel gesynchro-
+  // niseerd over alle testrijen (die delen altijd 1 kleur voor de hele testset).
+  const collapseToOneRow = sameLayerSettings && isLaagdik;
 
   let head = "<thead><tr><th>Test</th>";
-  SETTING_FIELDS.forEach((f) => { head += "<th>" + f.label + "</th>"; });
+  if (!sameLayerSettings) head += "<th>Laag</th>";
+  fields.forEach((f) => { head += "<th>" + f.label + "</th>"; });
+  head += "<th>Kleurnr</th><th>Kleur-naam</th><th>Leverancier</th><th>Lakgroep</th>";
   head += "<th>Oké</th><th></th></tr></thead>";
 
   const body = document.createElement("tbody");
-  list.forEach((d, idx) => {
-    const tr = document.createElement("tr");
-
-    const nameTd = document.createElement("td");
-    nameTd.className = "ts-testname";
-    nameTd.innerHTML = '<span class="ds-dot" style="background:' + d.color + '"></span>' +
-      '<span class="nm">' + escapeHtml(d.name) + "</span>";
-    tr.appendChild(nameTd);
-
-    SETTING_FIELDS.forEach((f) => {
-      const td = document.createElement("td");
-      const inp = document.createElement("input");
-      inp.type = f.type;
-      if (f.type === "number") { inp.step = "any"; inp.className = "num"; }
-      inp.value = d.settings[f.key] ?? "";
-      inp.addEventListener("input", () => { d.settings[f.key] = inp.value; });
-      td.appendChild(inp);
-      tr.appendChild(td);
+  if (collapseToOneRow) {
+    if (!layerConfig.sharedSettings) {
+      layerConfig.sharedSettings = { ...(list[0].settings || emptySettings()) };
+      delete layerConfig.sharedSettings.oke;
+    }
+    list.forEach((o) => {
+      const oke = o.settings ? o.settings.oke : true;
+      o.settings = { ...layerConfig.sharedSettings, oke: oke !== false };
     });
+  }
+  let sharedRowDone = false;
+  const sameKleurGroup = []; // rijen die de testset-brede kleur delen (niet gecollapsed naar 1 rij)
 
-    const okeTd = document.createElement("td");
-    okeTd.className = "chk";
-    const okeInp = document.createElement("input");
-    okeInp.type = "checkbox";
-    okeInp.title = "Meting is oké";
-    okeInp.checked = d.settings.oke !== false;
-    okeInp.addEventListener("change", () => { d.settings.oke = okeInp.checked; });
-    okeTd.appendChild(okeInp);
-    tr.appendChild(okeTd);
+  // Datasets uit hetzelfde bronbestand (bv. voor-/achterkant van dezelfde skid) horen bij elkaar
+  // en worden als 1 test-rij getoond (1 testnaam, 1 Oké-vinkje) i.p.v. als aparte tests.
+  const groupKeyOf = (d) => d.sourceFile || (d.name || "").replace(/ \([^()]*\)$/, "");
+  const testGroups = [];
+  list.forEach((d) => {
+    const key = groupKeyOf(d);
+    const last = testGroups[testGroups.length - 1];
+    if (last && last.key === key) last.items.push(d);
+    else testGroups.push({ key, items: [d] });
+  });
+  const layersOf = (d) => (sameLayerSettings ? [null] : defaultLayers(numLayers, d.layers, d.settings, layerConfig && layerConfig.kleurnummer));
 
-    const copyTd = document.createElement("td");
-    const copyBtn = document.createElement("button");
-    copyBtn.className = "ts-copy";
-    copyBtn.textContent = "Kopieer naar alle";
-    copyBtn.title = "Kopieer deze instellingen naar alle testen";
-    copyBtn.addEventListener("click", () => {
-      list.forEach((o) => { o.settings = { ...d.settings }; });
-      fillTsTable(tableEl, list);
+  testGroups.forEach((group) => {
+    const groupLayers = group.items.map((d) => {
+      const layers = layersOf(d);
+      if (!sameLayerSettings) d.layers = layers;
+      return layers;
     });
-    copyTd.appendChild(copyBtn);
-    tr.appendChild(copyTd);
+    const groupRowCount = groupLayers.reduce((sum, layers) => sum + layers.length, 0);
+    let groupRowRendered = false;
 
-    body.appendChild(tr);
+    group.items.forEach((d, di) => {
+      const layers = groupLayers[di];
+
+      layers.forEach((l, li) => {
+      const tr = document.createElement("tr");
+      const isGroupFirstRow = !groupRowRendered;
+      if (isGroupFirstRow) tr.className = "test-group-start";
+
+      if (isGroupFirstRow) {
+        const nameTd = document.createElement("td");
+        nameTd.className = "ts-testname";
+        nameTd.rowSpan = groupRowCount;
+        const label = group.items.length > 1 ? (group.key || d.name) : d.name;
+        nameTd.innerHTML = '<span class="name-wrap"><span class="ds-dot" style="background:' + d.color + '"></span>' +
+          '<span class="nm">' + escapeHtml(label) + "</span></span>";
+        tr.appendChild(nameTd);
+      }
+
+      if (!sameLayerSettings) {
+        const laagTd = document.createElement("td");
+        laagTd.textContent = "Laag " + (li + 1);
+        tr.appendChild(laagTd);
+      }
+
+      const renderSharedRowHere = !collapseToOneRow || !sharedRowDone;
+      if (renderSharedRowHere) {
+        const target = collapseToOneRow ? layerConfig.sharedSettings : (l || d.settings);
+        fields.forEach((f) => {
+          const td = document.createElement("td");
+          if (collapseToOneRow) td.rowSpan = list.length;
+          const inp = document.createElement("input");
+          inp.type = f.type;
+          if (f.type === "number") { inp.step = "any"; inp.className = "num"; }
+          inp.value = target[f.key] ?? "";
+          inp.addEventListener("input", () => {
+            target[f.key] = inp.value;
+            if (collapseToOneRow) list.forEach((o) => { (o.settings = o.settings || emptySettings())[f.key] = inp.value; });
+          });
+          td.appendChild(inp);
+          tr.appendChild(td);
+        });
+
+        const kleurTd = document.createElement("td");
+        const naamTd = document.createElement("td");
+        const levTd = document.createElement("td");
+        const lakTd = document.createElement("td");
+        if (collapseToOneRow) {
+          kleurTd.rowSpan = list.length; naamTd.rowSpan = list.length;
+          levTd.rowSpan = list.length; lakTd.rowSpan = list.length;
+        }
+        const kleurInp = document.createElement("input");
+        kleurInp.type = "text";
+        kleurInp.setAttribute("list", "kleurList");
+        const naamInp = document.createElement("input");
+        naamInp.type = "text";
+        naamInp.placeholder = "bijv. Chilli Red";
+        const levInp = document.createElement("input");
+        levInp.type = "text";
+        levInp.placeholder = "bijv. PPG";
+        const lakInp = document.createElement("input");
+        lakInp.type = "text";
+        lakInp.placeholder = "bijv. Lakgroep A";
+
+        const kleurTarget = collapseToOneRow ? layerConfig : (l || layerConfig || {});
+        kleurInp.value = kleurTarget.kleurnummer ?? "";
+        naamInp.value = kleurTarget.kleurNaam ?? "";
+        levInp.value = kleurTarget.kleurLeverancier ?? "";
+        lakInp.value = kleurTarget.kleurLakgroep ?? "";
+        bindKleurRow(kleurInp, naamInp, levInp, lakInp, kleurTarget, collapseToOneRow ? null : (sameLayerSettings ? sameKleurGroup : null));
+        if (!collapseToOneRow && sameLayerSettings) sameKleurGroup.push({ kleurInp, naamInp, levInp, lakInp });
+
+        kleurTd.appendChild(kleurInp);
+        naamTd.appendChild(naamInp);
+        levTd.appendChild(levInp);
+        lakTd.appendChild(lakInp);
+        tr.appendChild(kleurTd);
+        tr.appendChild(naamTd);
+        tr.appendChild(levTd);
+        tr.appendChild(lakTd);
+
+        if (collapseToOneRow) sharedRowDone = true;
+      }
+
+      if (isGroupFirstRow) {
+        const okeTd = document.createElement("td");
+        okeTd.className = "chk";
+        okeTd.rowSpan = groupRowCount;
+        const okeInp = document.createElement("input");
+        okeInp.type = "checkbox";
+        okeInp.title = "Meting is oké";
+        okeInp.checked = group.items.every((o) => o.settings.oke !== false);
+        okeInp.addEventListener("change", () => {
+          group.items.forEach((o) => { o.settings.oke = okeInp.checked; });
+        });
+        okeTd.appendChild(okeInp);
+        tr.appendChild(okeTd);
+
+        const copyTd = document.createElement("td");
+        copyTd.rowSpan = groupRowCount;
+        if (!collapseToOneRow) {
+          const copyBtn = document.createElement("button");
+          copyBtn.className = "ts-copy";
+          copyBtn.textContent = "Kopieer naar alle";
+          copyBtn.title = "Kopieer deze instellingen naar alle testen";
+          copyBtn.addEventListener("click", () => {
+            list.forEach((o) => {
+              o.settings = { ...d.settings };
+              o.layers = (d.layers || []).map((ly) => ({ ...ly }));
+            });
+            fillTsTable(tableEl, list, layerConfig);
+          });
+          copyTd.appendChild(copyBtn);
+        }
+        tr.appendChild(copyTd);
+      }
+
+      body.appendChild(tr);
+      groupRowRendered = true;
+      });
+    });
   });
 
   tableEl.innerHTML = head;
@@ -1301,6 +1805,375 @@ function renderSummary() {
       `<div class="sc-name"><span class="sc-dot" style="background:${d.color}"></span>${escapeHtml(d.name)}</div>` +
       `<div class="sc-metrics">${metrics}</div>`;
     summaryGrid.appendChild(card);
+  });
+}
+
+// Toont laagdiktestrips-resultaten als een tabel per bestand (positie-kolommen x replicate-rijen),
+// gekleurd op basis van de handmatige min/max-grenzen (standaard 35/45).
+function renderLaagdikTabel() {
+  ldMinInput.value = testset.minThickness == null ? "" : testset.minThickness;
+  ldMaxInput.value = testset.maxThickness == null ? "" : testset.maxThickness;
+  const min = testset.minThickness === "" || testset.minThickness == null ? null : toNum(testset.minThickness);
+  const max = testset.maxThickness === "" || testset.maxThickness == null ? null : toNum(testset.maxThickness);
+
+  laagdikWrap.innerHTML = "";
+  const visible = datasets.filter((d) => !d.hidden && d.values && d.values.labels);
+  laagdikEmpty.style.display = visible.length ? "none" : "block";
+
+  visible.forEach((d) => {
+    const grid = d.values;
+    const block = document.createElement("div");
+    block.className = "laagdik-block";
+
+    const title = document.createElement("div");
+    title.className = "laagdik-block-title";
+    title.textContent = d.name;
+    block.appendChild(title);
+
+    // Standaard alleen kolommen met minstens één meting tonen; met het vinkje "alle kolommen" alles.
+    const colIdxs = grid.labels.map((_, ci) => ci).filter((ci) => ldShowAllCols.checked || grid.rows.some((row) => row[ci] != null));
+
+    const scroll = document.createElement("div");
+    scroll.className = "laagdik-table-scroll";
+    let html = "<thead><tr><th></th>" + colIdxs.map((ci) => `<th>${escapeHtml(grid.labels[ci])}</th>`).join("") + "</tr></thead><tbody>";
+    grid.rows.forEach((row, i) => {
+      html += `<tr><th>${i + 1}</th>`;
+      colIdxs.forEach((ci) => {
+        const v = row[ci];
+        if (v == null) {
+          html += '<td class="ld-empty">–</td>';
+        } else {
+          const cls = min != null && v < min ? "ld-yellow" : (max != null && v > max ? "ld-red" : "ld-green");
+          html += `<td class="${cls}">${v.toFixed(1)}</td>`;
+        }
+      });
+      html += "</tr>";
+    });
+    html += "</tbody>";
+    const table = document.createElement("table");
+    table.className = "laagdik-table";
+    table.innerHTML = html;
+    scroll.appendChild(table);
+    block.appendChild(scroll);
+
+    const layoutSection = buildLayoutSection(d, grid, min, max);
+    if (layoutSection) block.appendChild(layoutSection);
+
+    laagdikWrap.appendChild(block);
+  });
+}
+
+ldMinInput.addEventListener("input", () => { testset.minThickness = ldMinInput.value; renderLaagdikTabel(); });
+ldMaxInput.addEventListener("input", () => { testset.maxThickness = ldMaxInput.value; renderLaagdikTabel(); });
+ldShowAllCols.addEventListener("change", () => renderLaagdikTabel());
+
+// Bepaalt CSS-klasse + weergavetekst voor één losse meetwaarde (marker of tabelcel).
+function ldCellInfo(v, min, max) {
+  if (v == null) return { cls: "ld-empty", text: "–" };
+  if (typeof v !== "number") return { cls: "ld-empty", text: String(v) };
+  const cls = min != null && v < min ? "ld-yellow" : (max != null && v > max ? "ld-red" : "ld-green");
+  return { cls, text: v.toFixed(1) };
+}
+
+// Bouwt de afbeelding-overlay-sectie (positie-markers met live data) voor één geladen bestand.
+// Retourneert null als dit bestand geen skid-type heeft (bv. oudere database-records van vóór deze functie).
+function buildLayoutSection(d, grid, min, max) {
+  const skidType = grid.skidType;
+  if (!skidType) return null;
+  const isEditing = layoutEdit && layoutEdit.datasetRef === d;
+  const saved = skidLayouts[skidType];
+  const imageUrl = isEditing ? (layoutEdit.previewUrl || (saved && saved.imageUrl) || null) : ((saved && saved.imageUrl) || null);
+  const markers = isEditing ? layoutEdit.markers : (saved ? saved.markers : []);
+
+  const section = document.createElement("div");
+  section.className = "ld-layout-section";
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "ld-layout-toolbar";
+  section.appendChild(toolbar);
+
+  if (isEditing) {
+    const fileLabel = document.createElement("label");
+    fileLabel.className = "filebtn";
+    fileLabel.append(imageUrl ? "Andere afbeelding kiezen" : "Afbeelding kiezen");
+    const fileInputEl = document.createElement("input");
+    fileInputEl.type = "file";
+    fileInputEl.accept = "image/*";
+    fileInputEl.addEventListener("change", async () => {
+      const file = fileInputEl.files && fileInputEl.files[0];
+      if (!file) return;
+      const buf = await file.arrayBuffer();
+      layoutEdit.pendingImageBytes = new Uint8Array(buf);
+      layoutEdit.pendingImageMime = file.type || "image/png";
+      if (layoutEdit.previewUrl) URL.revokeObjectURL(layoutEdit.previewUrl);
+      layoutEdit.previewUrl = URL.createObjectURL(file);
+      renderLaagdikTabel();
+    });
+    fileLabel.appendChild(fileInputEl);
+    toolbar.appendChild(fileLabel);
+
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "primary-btn";
+    saveBtn.textContent = "Opslaan";
+    saveBtn.addEventListener("click", async () => {
+      const ok = await saveSkidLayout(layoutEdit.skidType, layoutEdit.pendingImageBytes, layoutEdit.pendingImageMime, layoutEdit.markers);
+      if (ok) {
+        if (layoutEdit.previewUrl) URL.revokeObjectURL(layoutEdit.previewUrl);
+        layoutEdit = null;
+        renderLaagdikTabel();
+      }
+    });
+    toolbar.appendChild(saveBtn);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Annuleren";
+    cancelBtn.addEventListener("click", () => {
+      if (layoutEdit.previewUrl) URL.revokeObjectURL(layoutEdit.previewUrl);
+      layoutEdit = null;
+      renderLaagdikTabel();
+    });
+    toolbar.appendChild(cancelBtn);
+  } else {
+    const title = document.createElement("span");
+    title.className = "hint";
+    title.textContent = `Layout skid-type "${skidType}"`;
+    toolbar.appendChild(title);
+
+    const editBtn = document.createElement("button");
+    editBtn.textContent = imageUrl ? "Layout bewerken" : "Afbeelding kiezen";
+    editBtn.addEventListener("click", () => {
+      const openPickerDirect = !imageUrl;
+      layoutEdit = {
+        skidType,
+        datasetRef: d,
+        markers: (saved ? saved.markers : []).map((m) => ({ ...m })),
+        pendingImageBytes: null,
+        pendingImageMime: null,
+        previewUrl: null,
+      };
+      renderLaagdikTabel();
+      // Bij de allereerste keer meteen de bestandskiezer openen zodat één klik volstaat.
+      if (openPickerDirect) {
+        const freshInput = document.querySelector(".ld-layout-toolbar input[type=file]");
+        if (freshInput) freshInput.click();
+      }
+    });
+    toolbar.appendChild(editBtn);
+  }
+
+  if (!imageUrl) {
+    const empty = document.createElement("div");
+    empty.className = "ld-layout-empty";
+    empty.textContent = `Nog geen afbeelding ingesteld voor skid-type "${skidType}".`;
+    section.appendChild(empty);
+    return section;
+  }
+
+  if (!isEditing) {
+    const fsBtn = document.createElement("button");
+    fsBtn.textContent = "⛶ Volledig scherm";
+    fsBtn.title = "Plaatje met resultaten groter tonen";
+    fsBtn.addEventListener("click", () => openLayoutFullscreen(skidType, imageUrl, grid, markers, min, max));
+    toolbar.appendChild(fsBtn);
+  }
+
+  const canvas = document.createElement("div");
+  canvas.className = "ld-layout-canvas";
+  const img = document.createElement("img");
+  img.src = imageUrl;
+  img.draggable = false;
+  canvas.appendChild(img);
+  section.appendChild(canvas);
+
+  markers.forEach((marker, mi) => {
+    const ci = grid.labels.indexOf(marker.label);
+    if (ci === -1) return; // positie bestaat niet in dit bestand: marker niet tonen
+    const markerEl = document.createElement("div");
+    markerEl.className = "ld-marker" + (isEditing ? " ld-editing" : "");
+    markerEl.style.left = marker.xPct + "%";
+    markerEl.style.top = marker.yPct + "%";
+    markerEl.style.width = marker.wPct + "%";
+    markerEl.style.height = marker.hPct + "%";
+    markerEl.style.transform = "rotate(" + (marker.rotationDeg || 0) + "deg)";
+
+    const head = document.createElement("div");
+    head.className = "ld-marker-head";
+    head.textContent = marker.label;
+    markerEl.appendChild(head);
+
+    const body = document.createElement("div");
+    body.className = "ld-marker-body";
+    grid.rows.forEach((row) => {
+      const info = ldCellInfo(row[ci], min, max);
+      const cell = document.createElement("div");
+      cell.className = info.cls;
+      cell.textContent = info.text;
+      body.appendChild(cell);
+    });
+    markerEl.appendChild(body);
+
+    if (isEditing) {
+      markerEl.tabIndex = 0;
+      markerEl.title = "Slepen = verplaatsen · Scrollen = draaien · Delete-toets = verwijderen";
+
+      const resize = document.createElement("div");
+      resize.className = "ld-marker-resize";
+      markerEl.appendChild(resize);
+
+      attachMarkerInteractions(markerEl, canvas, marker, resize, layoutEdit.markers);
+    }
+
+    canvas.appendChild(markerEl);
+  });
+
+  if (isEditing) {
+    const placed = new Set(markers.map((m) => m.label));
+    const available = grid.labels.filter((l) => !placed.has(l));
+    if (available.length) {
+      const addRow = document.createElement("div");
+      addRow.className = "ld-layout-add";
+      const select = document.createElement("select");
+      available.forEach((l) => {
+        const opt = document.createElement("option");
+        opt.value = l;
+        opt.textContent = l;
+        select.appendChild(opt);
+      });
+      addRow.appendChild(select);
+      const addBtn = document.createElement("button");
+      addBtn.textContent = "+ Positie toevoegen";
+      addBtn.addEventListener("click", () => {
+        layoutEdit.markers.push({ label: select.value, xPct: 40, yPct: 40, wPct: 12, hPct: 10, rotationDeg: 0 });
+        renderLaagdikTabel();
+      });
+      addRow.appendChild(addBtn);
+      section.appendChild(addRow);
+    }
+  }
+
+  return section;
+}
+
+// Toont het skid-plaatje met resultaat-markers vergroot in een volledig-scherm-overlay (alleen bekijken).
+function openLayoutFullscreen(skidType, imageUrl, grid, markers, min, max) {
+  const overlay = document.createElement("div");
+  overlay.className = "ld-fs-overlay";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "ld-fs-close";
+  closeBtn.textContent = "\u00d7";
+  closeBtn.title = "Sluiten (Esc)";
+  overlay.appendChild(closeBtn);
+
+  const canvas = document.createElement("div");
+  canvas.className = "ld-layout-canvas ld-fs-canvas";
+  const img = document.createElement("img");
+  img.src = imageUrl;
+  img.draggable = false;
+  canvas.appendChild(img);
+  overlay.appendChild(canvas);
+
+  markers.forEach((marker) => {
+    const ci = grid.labels.indexOf(marker.label);
+    if (ci === -1) return;
+    const markerEl = document.createElement("div");
+    markerEl.className = "ld-marker";
+    markerEl.style.left = marker.xPct + "%";
+    markerEl.style.top = marker.yPct + "%";
+    markerEl.style.width = marker.wPct + "%";
+    markerEl.style.height = marker.hPct + "%";
+    markerEl.style.transform = "rotate(" + (marker.rotationDeg || 0) + "deg)";
+
+    const head = document.createElement("div");
+    head.className = "ld-marker-head";
+    head.textContent = marker.label;
+    markerEl.appendChild(head);
+
+    const body = document.createElement("div");
+    body.className = "ld-marker-body";
+    grid.rows.forEach((row) => {
+      const info = ldCellInfo(row[ci], min, max);
+      const cell = document.createElement("div");
+      cell.className = info.cls;
+      cell.textContent = info.text;
+      body.appendChild(cell);
+    });
+    markerEl.appendChild(body);
+
+    canvas.appendChild(markerEl);
+  });
+
+  function close() {
+    overlay.remove();
+    document.removeEventListener("keydown", onKey);
+  }
+  function onKey(e) { if (e.key === "Escape") close(); }
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  closeBtn.addEventListener("click", close);
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(overlay);
+}
+
+// Koppelt slepen/resizen/roteren/verwijderen aan een marker-element in edit-modus. Werkt in
+// percentages van de canvas-afbeelding zodat de positie resolutie-onafhankelijk blijft.
+// Roteren gebeurt met het muiswiel (geen apart draai-handvat) en verwijderen met de Delete-toets,
+// zodat alleen de blauwe resize-handle als los bedieningselement zichtbaar blijft.
+function attachMarkerInteractions(markerEl, canvasEl, marker, resizeHandle, markersArr) {
+  markerEl.addEventListener("mousedown", (e) => {
+    if (e.target === resizeHandle) return;
+    e.preventDefault();
+    markerEl.focus();
+    const rect = canvasEl.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const startXPct = marker.xPct, startYPct = marker.yPct;
+    function onMove(ev) {
+      marker.xPct = Math.max(0, Math.min(100, startXPct + ((ev.clientX - startX) / rect.width) * 100));
+      marker.yPct = Math.max(0, Math.min(100, startYPct + ((ev.clientY - startY) / rect.height) * 100));
+      markerEl.style.left = marker.xPct + "%";
+      markerEl.style.top = marker.yPct + "%";
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+
+  resizeHandle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = canvasEl.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const startW = marker.wPct, startH = marker.hPct;
+    function onMove(ev) {
+      marker.wPct = Math.max(2, startW + ((ev.clientX - startX) / rect.width) * 100);
+      marker.hPct = Math.max(2, startH + ((ev.clientY - startY) / rect.height) * 100);
+      markerEl.style.width = marker.wPct + "%";
+      markerEl.style.height = marker.hPct + "%";
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+
+  markerEl.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const step = e.shiftKey ? 1 : 5;
+    const delta = e.deltaY > 0 ? step : -step;
+    marker.rotationDeg = ((marker.rotationDeg || 0) + delta + 360) % 360;
+    markerEl.style.transform = "rotate(" + marker.rotationDeg + "deg)";
+  }, { passive: false });
+
+  markerEl.addEventListener("keydown", (e) => {
+    if (e.key !== "Delete" && e.key !== "Backspace") return;
+    e.preventDefault();
+    const idx = markersArr.indexOf(marker);
+    if (idx !== -1) markersArr.splice(idx, 1);
+    renderLaagdikTabel();
   });
 }
 
@@ -1534,9 +2407,11 @@ function confirmDialog(opts) {
 }
 
 // Pop-up na het inladen: opslaan in database of doorgaan zonder opslaan.
-function showSaveTestsetModal() {
+async function showSaveTestsetModal() {
   const prev = document.getElementById("saveTsOverlay");
   if (prev) prev.remove();
+
+  await ensureAppDb();
 
   const overlay = document.createElement("div");
   overlay.id = "saveTsOverlay";
@@ -1549,13 +2424,20 @@ function showSaveTestsetModal() {
     '<div class="modal-body">' +
       '<p class="modal-info">' + datasets.length + " meting(en) geladen. Vul naam en instellingen in om op te slaan in de database, of ga verder zonder opslaan.</p>" +
       '<div class="modal-meta">' +
+        '<label class="ts-field"><span>Testset-ID</span><input type="text" id="mdUid" readonly></label>' +
         '<label class="ts-field"><span>Project</span><input type="text" id="mdProject" list="projectList" placeholder="kies of typ een project"></label>' +
         '<label class="ts-field"><span>Naam testset</span><input type="text" id="mdName" placeholder="bijv. Chilli Red R11 300/200/600"></label>' +
         '<label class="ts-field"><span>Lijn</span><input type="text" id="mdLijn" list="lijnList" placeholder="T1, T2, T3, T9…"></label>' +
         '<label class="ts-field"><span>Beschrijving</span><textarea id="mdDesc" rows="2" placeholder="Korte omschrijving"></textarea></label>' +
-        '<label class="ts-field"><span>Kleurnummer</span><input type="text" id="mdColorNr" list="kleurList" placeholder="bijv. 1433004"></label>' +
-        '<label class="ts-field"><span>Kleur-naam</span><input type="text" id="mdKleurNaam" placeholder="bijv. Chilli Red"></label>' +
-        '<label class="ts-field"><span>Leverancier</span><input type="text" id="mdKleurLev" placeholder="bijv. PPG"></label>' +
+        '<label class="ts-field"><span>Aantal lagen</span><input type="number" id="mdNumLayers" min="1" value="2"></label>' +
+        '<label class="ts-field ts-field-inline"><span>&nbsp;</span><label class="oke-toggle"><input type="checkbox" id="mdSameLayers" checked>zelfde instelling voor alle lagen</label></label>' +
+        '<label class="ts-field" id="mdTypeField"><span>Type</span><span class="type-toggle-group">' +
+          '<label class="oke-toggle"><input type="checkbox" id="mdBrush">Brush</label>' +
+          '<label class="oke-toggle"><input type="checkbox" id="mdOverlap">Overlap</label>' +
+        "</span></label>" +
+        '<label class="ts-field hidden" id="mdMinMaxField"><span>Min / max laagdikte (&micro;m)</span><span class="type-toggle-group">' +
+          '<input type="number" id="mdMin" step="any" style="width:80px"> &ndash; <input type="number" id="mdMax" step="any" style="width:80px">' +
+        "</span></label>" +
       "</div>" +
       '<div class="ts-scroll"><table class="ts-table" id="mdTable"></table></div>' +
     "</div>" +
@@ -1567,24 +2449,55 @@ function showSaveTestsetModal() {
   overlay.append(box);
   document.body.append(overlay);
 
-  fillTsTable(box.querySelector("#mdTable"));
+  const mdTable = box.querySelector("#mdTable");
+  const layerConfig = {
+    numLayers: testset.numLayers || 2, sameLayerSettings: testset.sameLayerSettings !== false,
+    kleurnummer: testset.kleurnummer || "", kleurNaam: testset.kleurNaam || "", kleurLeverancier: testset.kleurLeverancier || "",
+    kleurLakgroep: testset.kleurLakgroep || "", testType: testset.testType,
+  };
+  fillTsTable(mdTable, datasets, layerConfig);
 
+  const idI = box.querySelector("#mdUid");
   const nameI = box.querySelector("#mdName");
   const descI = box.querySelector("#mdDesc");
-  const colorI = box.querySelector("#mdColorNr");
   const projectI = box.querySelector("#mdProject");
   const lijnI = box.querySelector("#mdLijn");
-  const kleurNaamI = box.querySelector("#mdKleurNaam");
-  const kleurLevI = box.querySelector("#mdKleurLev");
+  const numLayersI = box.querySelector("#mdNumLayers");
+  const sameLayersI = box.querySelector("#mdSameLayers");
+  const brushI = box.querySelector("#mdBrush");
+  const overlapI = box.querySelector("#mdOverlap");
+  const isLaagdik = testset.testType === "laagdiktestrips";
+  box.querySelector("#mdTypeField").classList.toggle("hidden", isLaagdik);
+  box.querySelector("#mdMinMaxField").classList.toggle("hidden", !isLaagdik);
+  const mdMinI = box.querySelector("#mdMin");
+  const mdMaxI = box.querySelector("#mdMax");
+  mdMinI.value = testset.minThickness || "35";
+  mdMaxI.value = testset.maxThickness || "45";
   nameI.value = testset.name || "";
   descI.value = testset.description || "";
-  colorI.value = testset.kleurnummer ?? "";
   projectI.value = testset.project || "";
   lijnI.value = testset.lijn || "";
-  kleurNaamI.value = testset.kleurNaam || "";
-  kleurLevI.value = testset.kleurLeverancier || "";
-  colorI.addEventListener("input", () => applyKleurLookup(colorI, kleurNaamI, kleurLevI));
-  applyKleurLookup(colorI, kleurNaamI, kleurLevI);
+  numLayersI.value = layerConfig.numLayers;
+  sameLayersI.checked = layerConfig.sameLayerSettings;
+  brushI.checked = testset.testType === "brush";
+  overlapI.checked = testset.testType !== "brush";
+  brushI.addEventListener("change", () => {
+    if (brushI.checked) overlapI.checked = false; else brushI.checked = true;
+  });
+  overlapI.addEventListener("change", () => {
+    if (overlapI.checked) brushI.checked = false; else overlapI.checked = true;
+  });
+  const updateIdPreview = () => { idI.value = resolveTestsetId(nameI.value); };
+  updateIdPreview();
+  nameI.addEventListener("input", updateIdPreview);
+  numLayersI.addEventListener("input", () => {
+    layerConfig.numLayers = Math.max(1, parseInt(numLayersI.value, 10) || 1);
+    fillTsTable(mdTable, datasets, layerConfig);
+  });
+  sameLayersI.addEventListener("change", () => {
+    layerConfig.sameLayerSettings = sameLayersI.checked;
+    fillTsTable(mdTable, datasets, layerConfig);
+  });
   nameI.focus();
 
   const close = () => overlay.remove();
@@ -1595,11 +2508,18 @@ function showSaveTestsetModal() {
     if (!nm) { nameI.classList.add("invalid"); nameI.focus(); return; }
     testset.name = nm;
     testset.description = descI.value;
-    testset.kleurnummer = colorI.value;
+    testset.kleurnummer = layerConfig.kleurnummer;
     testset.project = projectI.value;
     testset.lijn = lijnI.value;
-    testset.kleurNaam = kleurNaamI.value;
-    testset.kleurLeverancier = kleurLevI.value;
+    testset.kleurNaam = layerConfig.kleurNaam;
+    testset.kleurLeverancier = layerConfig.kleurLeverancier;
+    testset.kleurLakgroep = layerConfig.kleurLakgroep;
+    testset.numLayers = layerConfig.numLayers;
+    testset.sameLayerSettings = layerConfig.sameLayerSettings;
+    testset.testType = isLaagdik ? "laagdiktestrips" : (brushI.checked ? "brush" : "overlap");
+    testset.minThickness = mdMinI.value;
+    testset.maxThickness = mdMaxI.value;
+    syncAnalysisModeToTestType();
     updateTestsetTitle();
     close();
     await saveToDatabase();
@@ -1679,7 +2599,7 @@ function showCopyFallback(content, suggestedName, mime) {
 
 function clearAll() {
   datasets.length = 0;
-  testset = { name: "", description: "", kleurnummer: "", lijn: "", project: "", kleurNaam: "", kleurLeverancier: "" };
+  testset = { name: "", description: "", kleurnummer: "", lijn: "", project: "", kleurNaam: "", kleurLeverancier: "", kleurLakgroep: "", numLayers: 2, sameLayerSettings: true, testType: "overlap", minThickness: "35", maxThickness: "45", skidType: "", parts: "", batchNo: "", oke: true };
   datasetsSaved = true;
   currentViewId = null;
   clearMessages();
@@ -1694,11 +2614,16 @@ const SQL_WASM_B64 = "AGFzbQEAAAABoARFYAJ/fwF/YAF/AX9gA39/fwBgA39/fwF/YAF/AGACf3
 let SQL = null;
 
 const SCHEMA_SQL =
-  "CREATE TABLE IF NOT EXISTS testset (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, kleurnummer REAL, lijn TEXT, project TEXT, created_at TEXT);" +
+  "CREATE TABLE IF NOT EXISTS testset (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, kleurnummer REAL, lijn TEXT, project TEXT, created_at TEXT, " +
+  "num_layers INTEGER DEFAULT 2, same_layer_settings INTEGER DEFAULT 1, test_type TEXT DEFAULT 'overlap', min_thickness REAL DEFAULT 35, max_thickness REAL DEFAULT 45, " +
+  "skid_type TEXT, parts INTEGER, batch_no TEXT, oke INTEGER DEFAULT 1);" +
   "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY AUTOINCREMENT, testset_id INTEGER, position INTEGER, " +
   "name TEXT, color TEXT, programma TEXT, fm REAL, ll1 REAL, ll2 REAL, rpm REAL, oke INTEGER DEFAULT 1, values_json TEXT);" +
-  "CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT);" +
-  "CREATE TABLE IF NOT EXISTS view (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, project TEXT, mode TEXT, items_json TEXT, created_at TEXT);";
+  "CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT, lakgroep TEXT);" +
+  "CREATE TABLE IF NOT EXISTS view (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, project TEXT, mode TEXT, items_json TEXT, created_at TEXT);" +
+  "CREATE TABLE IF NOT EXISTS layer (id INTEGER PRIMARY KEY AUTOINCREMENT, test_id INTEGER NOT NULL, layer_index INTEGER NOT NULL, " +
+  "programma TEXT, fm REAL, ll1 REAL, ll2 REAL, rpm REAL, kleurnummer REAL);" +
+  "CREATE TABLE IF NOT EXISTS skid_layout (skid_type TEXT PRIMARY KEY, image_blob BLOB, image_mime TEXT, markers_json TEXT, updated_at TEXT);";
 
 // Voegt ontbrekende kolommen/tabellen toe aan oudere databases.
 function migrateSchema(db) {
@@ -1707,13 +2632,28 @@ function migrateSchema(db) {
   if (!tsNames.includes("kleurnummer")) db.run("ALTER TABLE testset ADD COLUMN kleurnummer REAL");
   if (!tsNames.includes("lijn")) db.run("ALTER TABLE testset ADD COLUMN lijn TEXT");
   if (!tsNames.includes("project")) db.run("ALTER TABLE testset ADD COLUMN project TEXT");
+  if (!tsNames.includes("num_layers")) db.run("ALTER TABLE testset ADD COLUMN num_layers INTEGER DEFAULT 2");
+  if (!tsNames.includes("same_layer_settings")) db.run("ALTER TABLE testset ADD COLUMN same_layer_settings INTEGER DEFAULT 1");
+  if (!tsNames.includes("test_type")) db.run("ALTER TABLE testset ADD COLUMN test_type TEXT DEFAULT 'overlap'");
+  if (!tsNames.includes("min_thickness")) db.run("ALTER TABLE testset ADD COLUMN min_thickness REAL DEFAULT 35");
+  if (!tsNames.includes("max_thickness")) db.run("ALTER TABLE testset ADD COLUMN max_thickness REAL DEFAULT 45");
+  if (!tsNames.includes("skid_type")) db.run("ALTER TABLE testset ADD COLUMN skid_type TEXT");
+  if (!tsNames.includes("parts")) db.run("ALTER TABLE testset ADD COLUMN parts INTEGER");
+  if (!tsNames.includes("batch_no")) db.run("ALTER TABLE testset ADD COLUMN batch_no TEXT");
+  if (!tsNames.includes("oke")) db.run("ALTER TABLE testset ADD COLUMN oke INTEGER DEFAULT 1");
 
   const tCols = db.exec("PRAGMA table_info(test)");
   const tNames = tCols.length ? tCols[0].values.map((r) => r[1]) : [];
   if (!tNames.includes("oke")) db.run("ALTER TABLE test ADD COLUMN oke INTEGER DEFAULT 1");
 
-  db.run("CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT, lakgroep TEXT)");
+  const kCols = db.exec("PRAGMA table_info(kleur)");
+  const kNames = kCols.length ? kCols[0].values.map((r) => r[1]) : [];
+  if (kNames.length && !kNames.includes("lakgroep")) db.run("ALTER TABLE kleur ADD COLUMN lakgroep TEXT");
   db.run("CREATE TABLE IF NOT EXISTS view (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, project TEXT, mode TEXT, items_json TEXT, created_at TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS layer (id INTEGER PRIMARY KEY AUTOINCREMENT, test_id INTEGER NOT NULL, layer_index INTEGER NOT NULL, " +
+    "programma TEXT, fm REAL, ll1 REAL, ll2 REAL, rpm REAL, kleurnummer REAL)");
+  db.run("CREATE TABLE IF NOT EXISTS skid_layout (skid_type TEXT PRIMARY KEY, image_blob BLOB, image_mime TEXT, markers_json TEXT, updated_at TEXT)");
 }
 
 async function ensureSql() {
@@ -1744,6 +2684,18 @@ function toNum(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+// Bepaalt het testset-ID: bestaand ID bij naam-match (overschrijven), anders het eerstvolgende vrije ID.
+function resolveTestsetId(name) {
+  if (!appDb) return 1;
+  const nm = (name || "").trim();
+  if (nm) {
+    const existing = appDb.exec("SELECT id FROM testset WHERE name = ?", [nm]);
+    if (existing.length) return existing[0].values[0][0];
+  }
+  const nxt = appDb.exec("SELECT COALESCE(MAX(id), 0) + 1 AS n FROM testset");
+  return nxt.length ? nxt[0].values[0][0] : 1;
+}
+
 async function saveToDatabase() {
   if (!datasets.length) { showMessage("✗ Geen data om op te slaan.", "err"); return; }
   const name = (testset.name || "").trim();
@@ -1753,8 +2705,9 @@ async function saveToDatabase() {
     await ensureAppDb();
 
     const existing = appDb.exec("SELECT id FROM testset WHERE name = ?", [name]);
+    const id = existing.length ? existing[0].values[0][0] : resolveTestsetId(name);
     if (existing.length) {
-      const overwriteId = existing[0].values[0][0];
+      const overwriteId = id;
       if (!(await confirmDialog({
         title: "Testset bestaat al",
         message: "Testset \"" + name + "\" bestaat al in de database.\nWil je deze overschrijven?",
@@ -1764,14 +2717,19 @@ async function saveToDatabase() {
         showMessage("Opslaan geannuleerd.", "ok");
         return;
       }
+      appDb.run("DELETE FROM layer WHERE test_id IN (SELECT id FROM test WHERE testset_id = ?)", [overwriteId]);
       appDb.run("DELETE FROM test WHERE testset_id = ?", [overwriteId]);
       appDb.run("DELETE FROM testset WHERE id = ?", [overwriteId]);
     }
 
-    appDb.run("INSERT INTO testset (name, description, kleurnummer, lijn, project, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [name, testset.description || "", toNum(testset.kleurnummer), testset.lijn || "", testset.project || "", new Date().toISOString()]);
-    const id = appDb.exec("SELECT last_insert_rowid()")[0].values[0][0];
+    appDb.run("INSERT INTO testset (id, name, description, kleurnummer, lijn, project, created_at, num_layers, same_layer_settings, test_type, min_thickness, max_thickness, skid_type, parts, batch_no, oke) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [id, name, testset.description || "", toNum(testset.kleurnummer), testset.lijn || "", testset.project || "", new Date().toISOString(),
+        testset.numLayers || 2, testset.sameLayerSettings !== false ? 1 : 0, normalizeTestType(testset.testType),
+        toNum(testset.minThickness), toNum(testset.maxThickness),
+        defaultSbg(testset.testType, testset.skidType || (datasets[0] && datasets[0].skidType) || ""),
+        toNum(testset.parts), testset.batchNo || "", testset.oke === false ? 0 : 1]);
 
+    const sameLayerSettings = testset.sameLayerSettings !== false;
     const stmt = appDb.prepare(
       "INSERT INTO test (testset_id, position, name, color, programma, fm, ll1, ll2, rpm, oke, values_json) " +
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -1781,6 +2739,7 @@ async function saveToDatabase() {
       stmt.run([id, i, d.name, d.color, s.programma || "", toNum(s.fm), toNum(s.ll1), toNum(s.ll2), toNum(s.rpm),
         s.oke === false ? 0 : 1, JSON.stringify(d.values)]);
       d.dbId = appDb.exec("SELECT last_insert_rowid()")[0].values[0][0];
+      if (!sameLayerSettings) insertLayersForTest(d.dbId, d, testset.numLayers || 2);
     });
     stmt.free();
 
@@ -1800,21 +2759,68 @@ async function saveToDatabase() {
 }
 
 // Koppelt Naam + Leverancier aan het kleurnummer (nieuw of bijgewerkt) in de kleur-tabel.
+// Bij "per laag"-instellingen heeft elke laag een eigen kleurnummer, dus die worden ook meegenomen.
 function upsertKleur() {
-  upsertKleurValues(testset.kleurnummer, testset.kleurNaam, testset.kleurLeverancier);
+  upsertKleurValues(testset.kleurnummer, testset.kleurNaam, testset.kleurLeverancier, testset.kleurLakgroep);
+  if (testset.sameLayerSettings === false) {
+    datasets.forEach((d) => {
+      (d.layers || []).forEach((l) => upsertKleurValues(l.kleurnummer, l.kleurNaam, l.kleurLeverancier, l.kleurLakgroep));
+    });
+  }
 }
 
-function upsertKleurValues(nummer, naam, leverancier) {
+function upsertKleurValues(nummer, naam, leverancier, lakgroep) {
   const key = kleurKey(nummer);
   if (!key) return;
   const n = (naam || "").trim();
   const lev = (leverancier || "").trim();
-  if (!n && !lev) return;
+  const lak = (lakgroep || "").trim();
+  if (!n && !lev && !lak) return;
   appDb.run(
-    "INSERT INTO kleur (nummer, naam, leverancier) VALUES (?, ?, ?) " +
-    "ON CONFLICT(nummer) DO UPDATE SET naam = excluded.naam, leverancier = excluded.leverancier",
-    [key, n, lev]
+    "INSERT INTO kleur (nummer, naam, leverancier, lakgroep) VALUES (?, ?, ?, ?) " +
+    "ON CONFLICT(nummer) DO UPDATE SET naam = excluded.naam, leverancier = excluded.leverancier, lakgroep = excluded.lakgroep",
+    [key, n, lev, lak]
   );
+}
+
+// Vervangt de laag-rijen van een test door de huidige d.layers (verwacht !sameLayerSettings).
+function insertLayersForTest(testId, d, numLayers) {
+  appDb.run("DELETE FROM layer WHERE test_id = ?", [testId]);
+  const layers = defaultLayers(numLayers || 2, d.layers, d.settings, testset.kleurnummer);
+  const stmt = appDb.prepare(
+    "INSERT INTO layer (test_id, layer_index, programma, fm, ll1, ll2, rpm, kleurnummer) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  );
+  layers.forEach((l, i) => {
+    stmt.run([testId, i + 1, l.programma || "", toNum(l.fm), toNum(l.ll1), toNum(l.ll2), toNum(l.rpm), toNum(l.kleurnummer)]);
+  });
+  stmt.free();
+}
+
+// Haalt laag-rijen op voor meerdere test-id's tegelijk; retourneert Map<testId, laag[]> (gesorteerd op layer_index).
+function fetchLayersForTestIds(ids) {
+  const map = new Map();
+  const uniqueIds = [...new Set((ids || []).filter((id) => id != null))];
+  if (!uniqueIds.length || !appDb) return map;
+  const placeholders = uniqueIds.map(() => "?").join(",");
+  const res = appDb.exec(
+    "SELECT test_id, layer_index, programma, fm, ll1, ll2, rpm, kleurnummer FROM layer " +
+    "WHERE test_id IN (" + placeholders + ") ORDER BY test_id, layer_index",
+    uniqueIds
+  );
+  if (!res.length) return map;
+  res[0].values.forEach((r) => {
+    const testId = r[0];
+    if (!map.has(testId)) map.set(testId, []);
+    map.get(testId).push({
+      programma: r[2] || "",
+      fm: r[3] == null ? "" : String(r[3]),
+      ll1: r[4] == null ? "" : String(r[4]),
+      ll2: r[5] == null ? "" : String(r[5]),
+      rpm: r[6] == null ? "" : String(r[6]),
+      kleurnummer: r[7] == null ? "" : String(r[7]),
+    });
+  });
+  return map;
 }
 
 async function ensureAppDb() {
@@ -1839,7 +2845,8 @@ function loadMeasurements() {
   if (!appDb) return;
   const res = appDb.exec(
     "SELECT ts.name, ts.kleurnummer, t.name, t.color, t.programma, t.fm, t.ll1, t.ll2, t.rpm, t.values_json, ts.created_at, t.id, t.testset_id, " +
-    "ts.lijn, ts.project, t.oke " +
+    "ts.lijn, ts.project, t.oke, ts.num_layers, ts.same_layer_settings, ts.test_type, ts.min_thickness, ts.max_thickness, " +
+    "ts.description, ts.skid_type, ts.parts, ts.batch_no, ts.oke " +
     "FROM test t JOIN testset ts ON t.testset_id = ts.id " +
     "ORDER BY ts.name COLLATE NOCASE, ts.id, t.position"
   );
@@ -1864,42 +2871,185 @@ function loadMeasurements() {
       lijn: r[13] || "",
       project: r[14] || "",
       oke: r[15] == null ? true : Number(r[15]) !== 0,
+      numLayers: r[16] == null ? 2 : Number(r[16]),
+      sameLayerSettings: r[17] == null ? true : Number(r[17]) !== 0,
+      testType: normalizeTestType(r[18]),
+      minThickness: r[19] == null ? "" : String(r[19]),
+      maxThickness: r[20] == null ? "" : String(r[20]),
       kleurNaam: kInfo.naam || "",
       kleurLeverancier: kInfo.leverancier || "",
+      kleurLakgroep: kInfo.lakgroep || "",
+      layers: [],
+      description: r[21] || "",
+      skidType: r[22] || "",
+      parts: r[23] == null ? "" : String(r[23]),
+      batchNo: r[24] || "",
+      testsetOke: r[25] == null ? true : Number(r[25]) !== 0,
     };
   });
+  const idsNeedingLayers = dbMeasurements.filter((m) => !m.sameLayerSettings).map((m) => m.id);
+  const layersByTestId = fetchLayersForTestIds(idsNeedingLayers);
+  dbMeasurements.forEach((m) => { m.layers = layersByTestId.get(m.id) || []; });
+}
+
+// Groepeert de al-geladen metingen tot 1 rij per testset t.b.v. het Overview-paneel.
+function buildOverviewRows() {
+  const byTestset = new Map();
+  let backfilled = false;
+  dbMeasurements.forEach((m) => {
+    if (!byTestset.has(m.testsetId)) {
+      let skidType = m.skidType;
+      if (!skidType) {
+        skidType = defaultSbg(m.testType, "");
+        if (skidType) {
+          appDb.run("UPDATE testset SET skid_type = ? WHERE id = ?", [skidType, m.testsetId]);
+          backfilled = true;
+        }
+      }
+      byTestset.set(m.testsetId, {
+        id: m.testsetId,
+        name: m.testsetName,
+        date: m.date,
+        testType: m.testType,
+        skidType,
+        parts: m.parts,
+        batchNo: m.batchNo,
+        description: m.description,
+        lakgroep: m.kleurLakgroep,
+        oke: m.testsetOke,
+        count: 0,
+      });
+    }
+    byTestset.get(m.testsetId).count++;
+  });
+  if (backfilled) persistDb();
+  return [...byTestset.values()].sort((a, b) => b.id - a.id);
+}
+
+
+// Laadt alle per-skid-type afbeelding+marker-layouts (skid_layout-tabel) in het geheugen.
+function loadSkidLayouts() {
+  Object.values(skidLayouts).forEach((l) => { if (l.imageUrl) URL.revokeObjectURL(l.imageUrl); });
+  skidLayouts = {};
+  if (!appDb) return;
+  let res;
+  try {
+    res = appDb.exec("SELECT skid_type, image_blob, image_mime, markers_json FROM skid_layout");
+  } catch (_) { return; }
+  if (!res.length) return;
+  res[0].values.forEach((r) => {
+    const skidType = r[0];
+    const blob = r[1];
+    const mime = r[2] || "image/png";
+    let markers = [];
+    try { markers = JSON.parse(r[3] || "[]"); } catch (_) { markers = []; }
+    const imageUrl = blob ? URL.createObjectURL(new Blob([blob], { type: mime })) : null;
+    skidLayouts[skidType] = { imageUrl, mime, markers };
+  });
+}
+
+// Slaat de afbeelding+marker-layout voor één skid-type op in de gedeelde database.
+// imageBytes/imageMime mogen null zijn om de bestaande afbeelding te behouden (alleen markers wijzigen).
+async function saveSkidLayout(skidType, imageBytes, imageMime, markers) {
+  if (!appDb) { showMessage("✗ Geen database geladen.", "err"); return false; }
+  let finalBytes = imageBytes;
+  let finalMime = imageMime;
+  if (!finalBytes) {
+    const existing = appDb.exec("SELECT image_blob, image_mime FROM skid_layout WHERE skid_type = ?", [skidType]);
+    if (existing.length) { finalBytes = existing[0].values[0][0]; finalMime = existing[0].values[0][1]; }
+  }
+  appDb.run(
+    "INSERT INTO skid_layout (skid_type, image_blob, image_mime, markers_json, updated_at) VALUES (?, ?, ?, ?, ?) " +
+    "ON CONFLICT(skid_type) DO UPDATE SET image_blob = excluded.image_blob, image_mime = excluded.image_mime, " +
+    "markers_json = excluded.markers_json, updated_at = excluded.updated_at",
+    [skidType, finalBytes || null, finalMime || null, JSON.stringify(markers), new Date().toISOString()]
+  );
+  const persisted = await persistDb();
+  if (persisted) loadSkidLayouts();
+  return persisted;
+}
+
+// Kleur-info (naam/leverancier) voor een specifieke laag, met terugval op het testset-kleurnummer.
+function layerKleurInfo(l, m) {
+  const num = (l && l.kleurnummer) || m.kleurnummer;
+  return kleurMap[kleurKey(num)] || {};
+}
+
+// True als twee lagen exact dezelfde instellingen hebben (voor het samenvoegen van rijen).
+function layersEqual(a, b) {
+  return ["programma", "fm", "ll1", "ll2", "rpm", "kleurnummer"].every((k) => (a[k] || "") === (b[k] || ""));
+}
+
+// Groepeert opeenvolgende lagen met identieke instellingen tot één rij (bv. "Laag 1/2").
+function groupConsecutiveLayers(layers) {
+  const groups = [];
+  layers.forEach((l, i) => {
+    const last = groups[groups.length - 1];
+    if (last && layersEqual(last.layer, l)) {
+      last.indices.push(i + 1);
+    } else {
+      groups.push({ indices: [i + 1], layer: l });
+    }
+  });
+  return groups;
+}
+
+// Laag-groepen voor een meting: bij "zelfde instelling" is dat altijd één groep 1..numLayers.
+function measurementLayerGroups(m) {
+  if (m.sameLayerSettings || !m.layers || !m.layers.length) {
+    const n = m.numLayers || 2;
+    return [{ indices: Array.from({ length: n }, (_, i) => i + 1), layer: null }];
+  }
+  return groupConsecutiveLayers(m.layers);
+}
+
+// Test-brede match voor "zelfde instelling"-testen, anders match zodra één van de lagen voldoet.
+function matchesAcrossLayers(m, filterValue, getTestValue, getLayerValue) {
+  if (!filterValue) return true;
+  if (m.sameLayerSettings || !m.layers || !m.layers.length) {
+    return String(getTestValue(m) ?? "").toLowerCase().includes(filterValue);
+  }
+  return m.layers.some((l) => String(getLayerValue(l, m) ?? "").toLowerCase().includes(filterValue));
 }
 
 function filteredMeasurements() {
   const f = {
+    testsetId: filterInputs.testsetId.value.trim().toLowerCase(),
     name: filterInputs.name.value.trim().toLowerCase(),
     kleurnummer: filterInputs.kleurnummer.value.trim().toLowerCase(),
     project: filterInputs.project.value.trim().toLowerCase(),
     lijn: filterInputs.lijn.value.trim().toLowerCase(),
+    testType: filterInputs.testType.value,
     kleurNaam: filterInputs.kleurNaam.value.trim().toLowerCase(),
     leverancier: filterInputs.leverancier.value.trim().toLowerCase(),
+    lakgroep: filterInputs.lakgroep.value.trim().toLowerCase(),
     programma: filterInputs.programma.value.trim().toLowerCase(),
     fm: filterInputs.fm.value.trim().toLowerCase(),
     ll1: filterInputs.ll1.value.trim().toLowerCase(),
     ll2: filterInputs.ll2.value.trim().toLowerCase(),
     rpm: filterInputs.rpm.value.trim().toLowerCase(),
+    numLayers: filterInputs.numLayers.value.trim().toLowerCase(),
   };
   const dateFrom = parseDMY(fltDateFrom.value);
   const dateTo = parseDMY(fltDateTo.value);
   const showNotOke = fltOke.checked;
   return dbMeasurements.filter((m) =>
     (showNotOke || m.oke) &&
+    (!f.testsetId || String(m.testsetId).includes(f.testsetId)) &&
     (!f.name || m.testsetName.toLowerCase().includes(f.name)) &&
-    (!f.kleurnummer || m.kleurnummer.toLowerCase().includes(f.kleurnummer)) &&
     (!f.project || m.project.toLowerCase().includes(f.project)) &&
     (!f.lijn || m.lijn.toLowerCase().includes(f.lijn)) &&
-    (!f.kleurNaam || m.kleurNaam.toLowerCase().includes(f.kleurNaam)) &&
-    (!f.leverancier || m.kleurLeverancier.toLowerCase().includes(f.leverancier)) &&
-    (!f.programma || m.programma.toLowerCase().includes(f.programma)) &&
-    (!f.fm || m.fm.toLowerCase().includes(f.fm)) &&
-    (!f.ll1 || m.ll1.toLowerCase().includes(f.ll1)) &&
-    (!f.ll2 || m.ll2.toLowerCase().includes(f.ll2)) &&
-    (!f.rpm || m.rpm.toLowerCase().includes(f.rpm)) &&
+    (!f.testType || m.testType === f.testType) &&
+    (!f.numLayers || String(m.numLayers).includes(f.numLayers)) &&
+    matchesAcrossLayers(m, f.kleurnummer, (mm) => mm.kleurnummer, (l, mm) => l.kleurnummer || mm.kleurnummer) &&
+    matchesAcrossLayers(m, f.kleurNaam, (mm) => mm.kleurNaam, (l, mm) => layerKleurInfo(l, mm).naam) &&
+    matchesAcrossLayers(m, f.leverancier, (mm) => mm.kleurLeverancier, (l, mm) => layerKleurInfo(l, mm).leverancier) &&
+    matchesAcrossLayers(m, f.lakgroep, (mm) => mm.kleurLakgroep, (l, mm) => layerKleurInfo(l, mm).lakgroep) &&
+    matchesAcrossLayers(m, f.programma, (mm) => mm.programma, (l) => l.programma) &&
+    matchesAcrossLayers(m, f.fm, (mm) => mm.fm, (l) => l.fm) &&
+    matchesAcrossLayers(m, f.ll1, (mm) => mm.ll1, (l) => l.ll1) &&
+    matchesAcrossLayers(m, f.ll2, (mm) => mm.ll2, (l) => l.ll2) &&
+    matchesAcrossLayers(m, f.rpm, (mm) => mm.rpm, (l) => l.rpm) &&
     (!dateFrom || (m.date && m.date >= dateFrom)) &&
     (!dateTo || (m.date && m.date <= dateTo))
   );
@@ -1924,10 +3074,10 @@ function renderMeasTable() {
   if (total && !active) {
     if (measCount) measCount.textContent = total + " meting" + (total === 1 ? "" : "en") + " in database. Gebruik de filters om metingen te tonen.";
     measTable.innerHTML =
-      '<thead><tr><th>Project</th><th>Testset</th><th>Lijn</th><th>Kleurnr</th><th>Kleur-naam</th>' +
-      "<th>Leverancier</th><th>Ok&eacute;</th><th>Aangemaakt</th><th>Meting</th><th>Programma</th>" +
+      '<thead><tr><th>Testset-ID</th><th>Project</th><th>Testset</th><th>Lijn</th><th>Type</th><th>Ok&eacute;</th><th>Aangemaakt</th><th>Meting</th>' +
+      "<th>Laag</th><th>Kleurnr</th><th>Kleur-naam</th><th>Leverancier</th><th>Lakgroep</th><th>Programma</th>" +
       "<th>FM</th><th>LL1</th><th>LL2</th><th>rpm</th></tr></thead>" +
-      '<tbody><tr><td colspan="14" class="meas-empty">Vul een filter in om metingen te tonen.</td></tr></tbody>';
+      '<tbody><tr><td colspan="18" class="meas-empty">Vul een filter in om metingen te tonen.</td></tr></tbody>';
     updateSelCount();
     return;
   }
@@ -1942,38 +3092,74 @@ function renderMeasTable() {
       measCount.textContent = rows.length + " van " + total + " metingen (gefilterd).";
     }
   }
-  let html = "<thead><tr>" +
+
+  measTable.innerHTML = "<thead><tr>" +
     '<th class="chk"><input type="checkbox" id="measCheckAll" title="Alles selecteren"></th>' +
-    "<th>Project</th><th>Testset</th><th>Lijn</th><th>Kleurnr</th><th>Kleur-naam</th><th>Leverancier</th><th>Ok&eacute;</th>" +
-    "<th>Aangemaakt</th><th>Meting</th><th>Programma</th><th>FM</th><th>LL1</th><th>LL2</th><th>rpm</th>" +
-    "</tr></thead><tbody>";
+    "<th>Testset-ID</th><th>Project</th><th>Testset</th><th>Lijn</th><th>Type</th><th>Ok&eacute;</th><th>Aangemaakt</th><th>Meting</th>" +
+    "<th>Laag</th><th>Kleurnr</th><th>Kleur-naam</th><th>Leverancier</th><th>Lakgroep</th><th>Programma</th>" +
+    "<th>FM</th><th>LL1</th><th>LL2</th><th>rpm</th>" +
+    "</tr></thead>";
+
+  const body = document.createElement("tbody");
   if (!rows.length) {
-    html += '<tr><td colspan="15" class="meas-empty">Geen metingen gevonden.</td></tr>';
+    body.innerHTML = '<tr><td colspan="19" class="meas-empty">Geen metingen gevonden.</td></tr>';
   } else {
     rows.forEach((m) => {
-      const i = dbMeasurements.indexOf(m);
-      html += "<tr>" +
-        '<td class="chk"><input type="checkbox" class="meas-chk" data-idx="' + i + '"></td>' +
-        "<td>" + escapeHtml(m.project) + "</td>" +
-        '<td>' + escapeHtml(m.testsetName) + "</td>" +
-        "<td>" + escapeHtml(m.lijn) + "</td>" +
-        "<td>" + escapeHtml(m.kleurnummer) + "</td>" +
-        "<td>" + escapeHtml(m.kleurNaam) + "</td>" +
-        "<td>" + escapeHtml(m.kleurLeverancier) + "</td>" +
-        '<td class="chk">' + (m.oke ? "✓" : '<span class="niet-oke">✗</span>') + "</td>" +
-        "<td>" + escapeHtml(fmtDate(m.date)) + "</td>" +
-        '<td class="ts-testname"><span class="ds-dot" style="background:' + (m.color || "#999") + '"></span>' +
-          '<span class="nm">' + escapeHtml(m.name) + "</span></td>" +
-        "<td>" + escapeHtml(m.programma) + "</td>" +
-        '<td class="num">' + escapeHtml(m.fm) + "</td>" +
-        '<td class="num">' + escapeHtml(m.ll1) + "</td>" +
-        '<td class="num">' + escapeHtml(m.ll2) + "</td>" +
-        '<td class="num">' + escapeHtml(m.rpm) + "</td>" +
-        "</tr>";
+      const idx = dbMeasurements.indexOf(m);
+      const groups = measurementLayerGroups(m);
+
+      groups.forEach((g, gi) => {
+        const tr = document.createElement("tr");
+        if (gi === 0) {
+          tr.className = "meas-group-start";
+          const mk = (html, cls) => {
+            const td = document.createElement("td");
+            if (cls) td.className = cls;
+            td.innerHTML = html;
+            if (groups.length > 1) td.rowSpan = groups.length;
+            tr.appendChild(td);
+          };
+          mk('<input type="checkbox" class="meas-chk" data-idx="' + idx + '">', "chk");
+          mk(escapeHtml(String(m.testsetId ?? "")));
+          mk(escapeHtml(m.project));
+          mk(escapeHtml(m.testsetName));
+          mk(escapeHtml(m.lijn));
+          mk(m.testType === "brush" ? "Brush" : (m.testType === "laagdiktestrips" ? "Laagdiktestrips" : "Overlap"));
+          mk(m.oke ? "✓" : '<span class="niet-oke">✗</span>', "chk");
+          mk(escapeHtml(fmtDate(m.date)));
+          mk('<span class="name-wrap"><span class="ds-dot" style="background:' + (m.color || "#999") + '"></span>' +
+            '<span class="nm">' + escapeHtml(m.name) + "</span></span>", "ts-testname");
+        }
+
+        const laagTd = document.createElement("td");
+        laagTd.textContent = "Laag " + g.indices.join("/");
+        tr.appendChild(laagTd);
+
+        const l = g.layer;
+        const kleurnummer = l ? (l.kleurnummer || m.kleurnummer) : m.kleurnummer;
+        const kInfo = l ? layerKleurInfo(l, m) : { naam: m.kleurNaam, leverancier: m.kleurLeverancier, lakgroep: m.kleurLakgroep };
+        const vals = l || m;
+        const cell = (text, cls) => {
+          const td = document.createElement("td");
+          if (cls) td.className = cls;
+          td.textContent = text;
+          tr.appendChild(td);
+        };
+        cell(kleurnummer);
+        cell(kInfo.naam || "");
+        cell(kInfo.leverancier || "");
+        cell(kInfo.lakgroep || "");
+        cell(vals.programma || "");
+        cell(vals.fm ?? "", "num");
+        cell(vals.ll1 ?? "", "num");
+        cell(vals.ll2 ?? "", "num");
+        cell(vals.rpm ?? "", "num");
+
+        body.appendChild(tr);
+      });
     });
   }
-  html += "</tbody>";
-  measTable.innerHTML = html;
+  measTable.appendChild(body);
 
   const checkAll = document.getElementById("measCheckAll");
   if (checkAll) {
@@ -2014,8 +3200,10 @@ function refreshDbUI() {
   const sets = listTestsets();
   refreshDatalists();
   loadMeasurements();
+  loadSkidLayouts();
   renderMeasTable();
   renderViews();
+  renderOverview();
   dbStatus.textContent = appDb
     ? (dbFileName || "database") + " — " + sets.length + " testset" + (sets.length === 1 ? "" : "s") +
       ", " + dbMeasurements.length + " meting" + (dbMeasurements.length === 1 ? "" : "en")
@@ -2092,6 +3280,102 @@ function renderViews() {
     });
     viewsList.appendChild(det);
   });
+}
+
+// --- Overview: 1 rij per testset, met inline-bewerkbare velden (autosave) ---
+function renderOverview() {
+  if (!overviewBody) return;
+  overviewBody.innerHTML = "";
+  if (!appDb) {
+    overviewEmpty.textContent = "Open eerst een database om het overzicht te tonen.";
+    overviewEmpty.style.display = "block";
+    return;
+  }
+  const rows = buildOverviewRows();
+  if (!rows.length) {
+    overviewEmpty.textContent = "Nog geen testsets in de database.";
+    overviewEmpty.style.display = "block";
+    return;
+  }
+  overviewEmpty.style.display = "none";
+
+  const testTypeLabel = (t) => (t === "brush" ? "Brush" : t === "laagdiktestrips" ? "Laagdiktestrips" : "Overlap");
+
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+
+    const mkText = (text) => { const td = document.createElement("td"); td.textContent = text; return td; };
+    tr.appendChild(mkText(row.id));
+    tr.appendChild(mkText(fmtDate(row.date)));
+
+    const sbgTd = document.createElement("td");
+    const sbgInp = document.createElement("input");
+    sbgInp.type = "text";
+    sbgInp.value = row.skidType || "";
+    sbgInp.addEventListener("click", (e) => e.stopPropagation());
+    sbgInp.addEventListener("change", () => { row.skidType = sbgInp.value; updateTestsetField(row.id, "skid_type", sbgInp.value); });
+    sbgTd.appendChild(sbgInp);
+    tr.appendChild(sbgTd);
+
+    tr.appendChild(mkText(testTypeLabel(row.testType)));
+
+    const okeTd = document.createElement("td");
+    okeTd.className = "chk";
+    const okeBtn = document.createElement("button");
+    okeBtn.type = "button";
+    okeBtn.className = "ov-oke " + (row.oke ? "ok" : "bad");
+    okeBtn.textContent = row.oke ? "✓" : "✗";
+    okeBtn.title = row.oke ? "Test is oké — klik om te wijzigen" : "Test is niet oké — klik om te wijzigen";
+    okeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      row.oke = !row.oke;
+      okeBtn.className = "ov-oke " + (row.oke ? "ok" : "bad");
+      okeBtn.textContent = row.oke ? "✓" : "✗";
+      okeBtn.title = row.oke ? "Test is oké — klik om te wijzigen" : "Test is niet oké — klik om te wijzigen";
+      updateTestsetField(row.id, "oke", row.oke ? 1 : 0);
+    });
+    okeTd.appendChild(okeBtn);
+    tr.appendChild(okeTd);
+
+    const partsTd = document.createElement("td");
+    const partsInp = document.createElement("input");
+    partsInp.type = "number";
+    partsInp.step = "any";
+    partsInp.value = row.parts || "";
+    partsInp.addEventListener("click", (e) => e.stopPropagation());
+    partsInp.addEventListener("change", () => { row.parts = partsInp.value; updateTestsetField(row.id, "parts", toNum(partsInp.value)); });
+    partsTd.appendChild(partsInp);
+    tr.appendChild(partsTd);
+
+    const batchTd = document.createElement("td");
+    const batchInp = document.createElement("input");
+    batchInp.type = "text";
+    batchInp.value = row.batchNo || "";
+    batchInp.addEventListener("click", (e) => e.stopPropagation());
+    batchInp.addEventListener("change", () => { row.batchNo = batchInp.value; updateTestsetField(row.id, "batch_no", batchInp.value); });
+    batchTd.appendChild(batchInp);
+    tr.appendChild(batchTd);
+
+    tr.appendChild(mkText(row.description || ""));
+    tr.appendChild(mkText(row.lakgroep || ""));
+
+    tr.addEventListener("click", () => openOverviewTestset(row.id));
+    overviewBody.appendChild(tr);
+  });
+}
+
+// Whitelist van kolomnamen: geen user-input in de SQL, dus geen injectierisico.
+const OVERVIEW_EDITABLE_COLUMNS = new Set(["skid_type", "parts", "batch_no", "oke"]);
+function updateTestsetField(testsetId, column, value) {
+  if (!appDb || !OVERVIEW_EDITABLE_COLUMNS.has(column)) return;
+  appDb.run("UPDATE testset SET " + column + " = ? WHERE id = ?", [value, testsetId]);
+  persistDb();
+}
+
+async function openOverviewTestset(id) {
+  // openTestsetFromDb() toont zelf al een "data vervangen"-bevestiging indien nodig.
+  await openTestsetFromDb(id);
+  closeOverview();
 }
 
 function showAddViewForm() {
@@ -2201,7 +3485,7 @@ async function openView(id) {
   }
   datasets.length = 0;
   incoming.forEach((d) => datasets.push(d));
-  testset = { name: v.name, description: "", kleurnummer: "", lijn: "", project: v.project || "", kleurNaam: "", kleurLeverancier: "" };
+  testset = { name: v.name, description: "", kleurnummer: "", lijn: "", project: v.project || "", kleurNaam: "", kleurLeverancier: "", kleurLakgroep: "", numLayers: 2, sameLayerSettings: true, testType: "overlap", skidType: "", parts: "", batchNo: "", oke: true };
   datasetsSaved = true;
   currentViewId = v.id;
   setMode(v.mode);
@@ -2490,8 +3774,8 @@ async function openTestsetFromDb(id) {
   if (!appDb) return;
   clearMessages();
   try {
-    const setRes = appDb.exec("SELECT name, description, kleurnummer FROM testset WHERE id = ?", [id]);
-    const meta = setRes.length ? setRes[0].values[0] : ["", "", null];
+    const setRes = appDb.exec("SELECT name, description, kleurnummer, num_layers, same_layer_settings, test_type, min_thickness, max_thickness, skid_type, parts, batch_no, oke FROM testset WHERE id = ?", [id]);
+    const meta = setRes.length ? setRes[0].values[0] : ["", "", null, 2, 1, "overlap", 35, 45, "", null, "", 1];
     const testRes = appDb.exec(
       "SELECT position, name, color, programma, fm, ll1, ll2, rpm, values_json, id FROM test WHERE testset_id = ? ORDER BY position",
       [id]
@@ -2507,6 +3791,7 @@ async function openTestsetFromDb(id) {
       return;
     }
 
+    const layersByTestId = fetchLayersForTestIds(rows.map((r) => r[9]));
     const incoming = rows.map((r, i) => ({
       name: r[1] || ("Test " + (i + 1)),
       color: r[2] || PALETTE[i % PALETTE.length],
@@ -2520,15 +3805,23 @@ async function openTestsetFromDb(id) {
       },
       values: JSON.parse(r[8] || "[]"),
       dbId: r[9],
+      layers: layersByTestId.get(r[9]) || [],
     }));
 
     datasets.length = 0;
-    testset = { name: meta[0] || "", description: meta[1] || "", kleurnummer: meta[2] == null ? "" : String(meta[2]) };
+    testset = {
+      name: meta[0] || "", description: meta[1] || "", kleurnummer: meta[2] == null ? "" : String(meta[2]),
+      numLayers: meta[3] == null ? 2 : Number(meta[3]), sameLayerSettings: meta[4] == null ? true : Number(meta[4]) !== 0,
+      testType: normalizeTestType(meta[5]),
+      minThickness: meta[6] == null ? "35" : String(meta[6]), maxThickness: meta[7] == null ? "45" : String(meta[7]),
+      skidType: meta[8] || "", parts: meta[9] == null ? "" : String(meta[9]), batchNo: meta[10] || "", oke: meta[11] == null ? true : Number(meta[11]) !== 0,
+    };
     incoming.forEach((d) => datasets.push(d));
     datasetsSaved = true;
     currentViewId = null;
     resetMeasFilters();
     renderMeasTable();
+    syncAnalysisModeToTestType();
     render();
     showMessage("✓ Testset \"" + testset.name + "\" geopend (" + incoming.length + " test" + (incoming.length === 1 ? "" : "en") + ").", "ok");
   } catch (err) {
@@ -2555,6 +3848,7 @@ async function loadSelection() {
   }
   try {
     const usedColors = new Set();
+    const layersByTestId = fetchLayersForTestIds(idxs.map((idx) => dbMeasurements[idx].id));
     const incoming = idxs.map((idx, i) => {
       const m = dbMeasurements[idx];
       let color = m.color || distinctColor(i);
@@ -2575,6 +3869,7 @@ async function loadSelection() {
         },
         values: JSON.parse(m.valuesJson || "[]"),
         dbId: m.id,
+        layers: layersByTestId.get(m.id) || [],
       };
     });
 
@@ -2591,14 +3886,20 @@ async function loadSelection() {
         lijn: first.lijn || "", project: first.project || "",
         kleurNaam: kn.size === 1 ? (first.kleurNaam || "") : "",
         kleurLeverancier: kn.size === 1 ? (first.kleurLeverancier || "") : "",
+        kleurLakgroep: kn.size === 1 ? (first.kleurLakgroep || "") : "",
+        numLayers: first.numLayers || 2, sameLayerSettings: first.sameLayerSettings !== false,
+        testType: normalizeTestType(first.testType),
+        minThickness: first.minThickness || "35", maxThickness: first.maxThickness || "45",
+        skidType: "", parts: "", batchNo: "", oke: true,
       };
     } else {
-      testset = { name: "Selectie", description: "", kleurnummer: "", lijn: "", project: "", kleurNaam: "", kleurLeverancier: "" };
+      testset = { name: "Selectie", description: "", kleurnummer: "", lijn: "", project: "", kleurNaam: "", kleurLeverancier: "", kleurLakgroep: "", numLayers: 2, sameLayerSettings: true, testType: "overlap", minThickness: "35", maxThickness: "45", skidType: "", parts: "", batchNo: "", oke: true };
     }
     datasetsSaved = true;
     currentViewId = null;
     resetMeasFilters();
     renderMeasTable();
+    syncAnalysisModeToTestType();
     render();
     showMessage("✓ " + incoming.length + " meting" + (incoming.length === 1 ? "" : "en") + " geladen.", "ok");
   } catch (err) {
@@ -2636,6 +3937,7 @@ async function deleteSelection() {
   }
   try {
     const placeholders = ids.map(() => "?").join(",");
+    appDb.run("DELETE FROM layer WHERE test_id IN (" + placeholders + ")", ids);
     appDb.run("DELETE FROM test WHERE id IN (" + placeholders + ")", ids);
     // Metingen ook uit views verwijderen; lege views opruimen.
     const viewChanges = stripIdsFromViews(ids);
@@ -2670,6 +3972,7 @@ function editSelection() {
   }
   clearMessages();
   const testsetId = [...testsetIds][0];
+  const layersByTestId = fetchLayersForTestIds(idxs.map((idx) => dbMeasurements[idx].id));
   const list = idxs.map((idx) => {
     const m = dbMeasurements[idx];
     return {
@@ -2684,6 +3987,7 @@ function editSelection() {
         rpm: m.rpm || "",
         oke: m.oke !== false,
       },
+      layers: layersByTestId.get(m.id) || [],
     };
   });
   const first = dbMeasurements[idxs[0]];
@@ -2700,6 +4004,12 @@ function editSelection() {
     project: first.project || "",
     kleurNaam: first.kleurNaam || "",
     kleurLeverancier: first.kleurLeverancier || "",
+    kleurLakgroep: first.kleurLakgroep || "",
+    numLayers: first.numLayers || 2,
+    sameLayerSettings: first.sameLayerSettings !== false,
+    testType: normalizeTestType(first.testType),
+    minThickness: first.minThickness || "35",
+    maxThickness: first.maxThickness || "45",
   };
   showEditSelectionModal(list, testsetId, meta);
 }
@@ -2721,13 +4031,20 @@ function showEditSelectionModal(list, testsetId, meta) {
       '<p class="modal-info">' + list.length + " meting(en) uit testset \u201c" + escapeHtml(meta.name) + "\u201d. " +
         "Let op: wijzigingen aan project, naam, lijn of kleur gelden voor de hele testset.</p>" +
       '<div class="modal-meta">' +
+        '<label class="ts-field"><span>Testset-ID</span><input type="text" id="esUid" readonly></label>' +
         '<label class="ts-field"><span>Project</span><input type="text" id="esProject" list="projectList" placeholder="kies of typ een project"></label>' +
         '<label class="ts-field"><span>Naam testset</span><input type="text" id="esName" placeholder="bijv. Chilli Red R11 300/200/600"></label>' +
         '<label class="ts-field"><span>Lijn</span><input type="text" id="esLijn" list="lijnList" placeholder="T1, T2, T3, T9…"></label>' +
         '<label class="ts-field"><span>Beschrijving</span><textarea id="esDesc" rows="2" placeholder="Korte omschrijving"></textarea></label>' +
-        '<label class="ts-field"><span>Kleurnummer</span><input type="text" id="esColorNr" list="kleurList" placeholder="bijv. 1433004"></label>' +
-        '<label class="ts-field"><span>Kleur-naam</span><input type="text" id="esKleurNaam" placeholder="bijv. Chilli Red"></label>' +
-        '<label class="ts-field"><span>Leverancier</span><input type="text" id="esKleurLev" placeholder="bijv. PPG"></label>' +
+        '<label class="ts-field"><span>Aantal lagen</span><input type="number" id="esNumLayers" min="1" value="2"></label>' +
+        '<label class="ts-field ts-field-inline"><span>&nbsp;</span><label class="oke-toggle"><input type="checkbox" id="esSameLayers" checked>zelfde instelling voor alle lagen</label></label>' +
+        '<label class="ts-field" id="esTypeField"><span>Type</span><span class="type-toggle-group">' +
+          '<label class="oke-toggle"><input type="checkbox" id="esBrush">Brush</label>' +
+          '<label class="oke-toggle"><input type="checkbox" id="esOverlap">Overlap</label>' +
+        "</span></label>" +
+        '<label class="ts-field hidden" id="esMinMaxField"><span>Min / max laagdikte (&micro;m)</span><span class="type-toggle-group">' +
+          '<input type="number" id="esMin" step="any" style="width:80px"> &ndash; <input type="number" id="esMax" step="any" style="width:80px">' +
+        "</span></label>" +
       "</div>" +
       '<div class="ts-scroll"><table class="ts-table" id="esTable"></table></div>' +
     "</div>" +
@@ -2739,22 +4056,54 @@ function showEditSelectionModal(list, testsetId, meta) {
   overlay.append(box);
   document.body.append(overlay);
 
-  fillTsTable(box.querySelector("#esTable"), list);
+  const esTable = box.querySelector("#esTable");
+  const layerConfig = {
+    numLayers: meta.numLayers || 2, sameLayerSettings: meta.sameLayerSettings !== false,
+    kleurnummer: meta.kleurnummer || "", kleurNaam: meta.kleurNaam || "", kleurLeverancier: meta.kleurLeverancier || "",
+    kleurLakgroep: meta.kleurLakgroep || "", testType: meta.testType,
+  };
+  fillTsTable(esTable, list, layerConfig);
 
+  const idI = box.querySelector("#esUid");
   const nameI = box.querySelector("#esName");
   const descI = box.querySelector("#esDesc");
-  const colorI = box.querySelector("#esColorNr");
   const projectI = box.querySelector("#esProject");
   const lijnI = box.querySelector("#esLijn");
-  const kleurNaamI = box.querySelector("#esKleurNaam");
-  const kleurLevI = box.querySelector("#esKleurLev");
+  const numLayersI = box.querySelector("#esNumLayers");
+  const sameLayersI = box.querySelector("#esSameLayers");
+  const brushI = box.querySelector("#esBrush");
+  const overlapI = box.querySelector("#esOverlap");
+  const isLaagdik = meta.testType === "laagdiktestrips";
+  box.querySelector("#esTypeField").classList.toggle("hidden", isLaagdik);
+  const minMaxField = box.querySelector("#esMinMaxField");
+  minMaxField.classList.toggle("hidden", !isLaagdik);
+  const minI = box.querySelector("#esMin");
+  const maxI = box.querySelector("#esMax");
+  minI.value = meta.minThickness || "35";
+  maxI.value = meta.maxThickness || "45";
+  idI.value = testsetId;
   nameI.value = meta.name || "";
   descI.value = meta.description || "";
-  colorI.value = meta.kleurnummer ?? "";
   projectI.value = meta.project || "";
   lijnI.value = meta.lijn || "";
-  kleurNaamI.value = meta.kleurNaam || "";
-  kleurLevI.value = meta.kleurLeverancier || "";
+  numLayersI.value = layerConfig.numLayers;
+  sameLayersI.checked = layerConfig.sameLayerSettings;
+  brushI.checked = meta.testType === "brush";
+  overlapI.checked = meta.testType !== "brush";
+  brushI.addEventListener("change", () => {
+    if (brushI.checked) overlapI.checked = false; else brushI.checked = true;
+  });
+  overlapI.addEventListener("change", () => {
+    if (overlapI.checked) brushI.checked = false; else overlapI.checked = true;
+  });
+  numLayersI.addEventListener("input", () => {
+    layerConfig.numLayers = Math.max(1, parseInt(numLayersI.value, 10) || 1);
+    fillTsTable(esTable, list, layerConfig);
+  });
+  sameLayersI.addEventListener("change", () => {
+    layerConfig.sameLayerSettings = sameLayersI.checked;
+    fillTsTable(esTable, list, layerConfig);
+  });
   nameI.focus();
 
   const close = () => overlay.remove();
@@ -2766,11 +4115,17 @@ function showEditSelectionModal(list, testsetId, meta) {
     const edited = {
       name: nm,
       description: descI.value,
-      kleurnummer: colorI.value,
+      kleurnummer: layerConfig.kleurnummer,
       project: projectI.value,
       lijn: lijnI.value,
-      kleurNaam: kleurNaamI.value,
-      kleurLeverancier: kleurLevI.value,
+      kleurNaam: layerConfig.kleurNaam,
+      kleurLeverancier: layerConfig.kleurLeverancier,
+      kleurLakgroep: layerConfig.kleurLakgroep,
+      numLayers: layerConfig.numLayers,
+      sameLayerSettings: layerConfig.sameLayerSettings,
+      testType: isLaagdik ? "laagdiktestrips" : (brushI.checked ? "brush" : "overlap"),
+      minThickness: minI.value,
+      maxThickness: maxI.value,
     };
     close();
     await updateSelectionInDb(list, testsetId, edited);
@@ -2792,9 +4147,12 @@ async function updateSelectionInDb(list, testsetId, meta) {
     return;
   }
   try {
+    const numLayers = meta.numLayers || 2;
+    const sameLayerSettings = meta.sameLayerSettings !== false;
     appDb.run(
-      "UPDATE testset SET name = ?, description = ?, kleurnummer = ?, lijn = ?, project = ? WHERE id = ?",
-      [meta.name, meta.description || "", toNum(meta.kleurnummer), meta.lijn || "", meta.project || "", testsetId]
+      "UPDATE testset SET name = ?, description = ?, kleurnummer = ?, lijn = ?, project = ?, num_layers = ?, same_layer_settings = ?, test_type = ?, min_thickness = ?, max_thickness = ? WHERE id = ?",
+      [meta.name, meta.description || "", toNum(meta.kleurnummer), meta.lijn || "", meta.project || "",
+        numLayers, sameLayerSettings ? 1 : 0, normalizeTestType(meta.testType), toNum(meta.minThickness), toNum(meta.maxThickness), testsetId]
     );
 
     const stmt = appDb.prepare(
@@ -2805,10 +4163,20 @@ async function updateSelectionInDb(list, testsetId, meta) {
       const s = d.settings || emptySettings();
       stmt.run([s.programma || "", toNum(s.fm), toNum(s.ll1), toNum(s.ll2), toNum(s.rpm),
         s.oke === false ? 0 : 1, d.id]);
+      if (sameLayerSettings) {
+        appDb.run("DELETE FROM layer WHERE test_id = ?", [d.id]);
+      } else {
+        insertLayersForTest(d.id, d, numLayers);
+      }
     });
     stmt.free();
 
-    upsertKleurValues(meta.kleurnummer, meta.kleurNaam, meta.kleurLeverancier);
+    upsertKleurValues(meta.kleurnummer, meta.kleurNaam, meta.kleurLeverancier, meta.kleurLakgroep);
+    if (!sameLayerSettings) {
+      list.forEach((d) => {
+        (d.layers || []).forEach((l) => upsertKleurValues(l.kleurnummer, l.kleurNaam, l.kleurLeverancier, l.kleurLakgroep));
+      });
+    }
 
     const persisted = await persistDb();
     refreshDbUI();
