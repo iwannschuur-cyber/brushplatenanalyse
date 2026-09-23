@@ -2114,6 +2114,16 @@ function openLayoutFullscreen(skidType, imageUrl, grid, markers, min, max) {
   document.body.appendChild(overlay);
 }
 
+// Berekent de halve breedte/hoogte van de as-uitgelijnde omhullende box van een gedraaide
+// marker (in %), zodat de sleep-clamp rekening houdt met rotatie i.p.v. alleen de ongedraaide
+// hoek — anders kan een gedraaide (bv. 90°) rechthoekige marker de rand van de afbeelding niet
+// bereiken omdat de rotatie om het midden draait en de ongedraaide hoek geclampt werd.
+function rotatedHalfExtents(wPct, hPct, deg) {
+  const rad = ((deg || 0) * Math.PI) / 180;
+  const c = Math.abs(Math.cos(rad)), s = Math.abs(Math.sin(rad));
+  return { halfW: (wPct * c + hPct * s) / 2, halfH: (wPct * s + hPct * c) / 2 };
+}
+
 // Koppelt slepen/resizen/roteren/verwijderen aan een marker-element in edit-modus. Werkt in
 // percentages van de canvas-afbeelding zodat de positie resolutie-onafhankelijk blijft.
 // Roteren gebeurt met het muiswiel (geen apart draai-handvat) en verwijderen met de Delete-toets,
@@ -2127,8 +2137,14 @@ function attachMarkerInteractions(markerEl, canvasEl, marker, resizeHandle, mark
     const startX = e.clientX, startY = e.clientY;
     const startXPct = marker.xPct, startYPct = marker.yPct;
     function onMove(ev) {
-      marker.xPct = Math.max(0, Math.min(100, startXPct + ((ev.clientX - startX) / rect.width) * 100));
-      marker.yPct = Math.max(0, Math.min(100, startYPct + ((ev.clientY - startY) / rect.height) * 100));
+      const nx = startXPct + ((ev.clientX - startX) / rect.width) * 100;
+      const ny = startYPct + ((ev.clientY - startY) / rect.height) * 100;
+      const { halfW, halfH } = rotatedHalfExtents(marker.wPct, marker.hPct, marker.rotationDeg);
+      const cx = nx + marker.wPct / 2, cy = ny + marker.hPct / 2;
+      const clampedCx = halfW * 2 > 100 ? 50 : Math.max(halfW, Math.min(100 - halfW, cx));
+      const clampedCy = halfH * 2 > 100 ? 50 : Math.max(halfH, Math.min(100 - halfH, cy));
+      marker.xPct = clampedCx - marker.wPct / 2;
+      marker.yPct = clampedCy - marker.hPct / 2;
       markerEl.style.left = marker.xPct + "%";
       markerEl.style.top = marker.yPct + "%";
     }
