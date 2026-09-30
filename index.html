@@ -833,7 +833,7 @@ else if (typeof exports === 'object'){
     <table class="ov-table">
       <thead>
         <tr>
-          <th>Testset-ID</th><th>Datum</th><th>Project</th><th>Beschrijving</th><th>SBG</th><th>Test-type</th><th>Oké</th>
+          <th>Testset-ID</th><th>Datum</th><th>Project</th><th>Naam testset</th><th>Beschrijving</th><th>SBG</th><th>Test-type</th><th>Oké</th>
           <th>Lakgroep</th><th>Parts</th><th>Batch No</th>
         </tr>
       </thead>
@@ -3584,6 +3584,7 @@ function renderOverview() {
     tr.appendChild(mkText(row.id));
     tr.appendChild(mkText(fmtDate(row.date)));
     tr.appendChild(mkText(row.project || ""));
+    tr.appendChild(mkText(row.name || ""));
     tr.appendChild(mkText(row.description || ""));
 
     const sbgTd = document.createElement("td");
