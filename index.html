@@ -343,7 +343,7 @@ else if (typeof exports === 'object'){
 
   main {
     max-width: min(2200px, 96vw);
-    margin: 20px auto;
+    margin: 70px auto 20px;
     padding: 0 20px;
     display: grid;
     gap: 20px;
@@ -626,19 +626,18 @@ else if (typeof exports === 'object'){
     .chart-wrap { height: clamp(300px, 58vh, 620px); }
   }
 
-  /* Linker tab-stack: Overview boven Views */
+  /* Linker tab-rij: Overview, Views, Report naast elkaar, linksboven */
   #leftTabs {
-    position: fixed; top: 50%; left: 0; transform: translateY(-50%);
-    z-index: 60; display: flex; flex-direction: column; gap: 8px;
+    position: fixed; top: 78px; left: 12px;
+    z-index: 60; display: flex; flex-direction: row; gap: 8px;
   }
   #leftTabs button {
     background: var(--scania-blue); color: #fff; border: none;
-    cursor: pointer; border-radius: 0 12px 12px 0; padding: 22px 12px;
+    cursor: pointer; border-radius: 10px; padding: 10px 18px;
     box-shadow: 2px 2px 10px rgba(0,0,0,.18); font-weight: 700; font-size: 16px;
     letter-spacing: .6px; transition: background .15s;
   }
   #leftTabs button:hover { background: var(--scania-blue-2); }
-  #leftTabs button span { writing-mode: vertical-rl; transform: rotate(180deg); }
   #viewsBackdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.32); z-index: 70;
     opacity: 0; pointer-events: none; transition: opacity .3s;
@@ -834,8 +833,8 @@ else if (typeof exports === 'object'){
     <table class="ov-table">
       <thead>
         <tr>
-          <th>Testset-ID</th><th>Datum</th><th>SBG</th><th>Test-type</th><th>Oké</th>
-          <th>Parts</th><th>Batch No</th><th>Beschrijving</th><th>Lakgroep</th>
+          <th>Testset-ID</th><th>Datum</th><th>Project</th><th>Beschrijving</th><th>SBG</th><th>Test-type</th><th>Oké</th>
+          <th>Lakgroep</th><th>Parts</th><th>Batch No</th>
         </tr>
       </thead>
       <tbody id="overviewBody"></tbody>
@@ -1345,11 +1344,28 @@ function findSkidSheets(wb) {
   const found = [];
   for (const n of wb.SheetNames) {
     const m = /^(.+?)Skid(\d*)$/i.exec(n);
-    if (m && wb.SheetNames.includes(m[1] + "SkidData" + m[2])) {
-      const suffix = m[2];
+    if (!m) continue;
+    const prefix = m[1];
+    const suffix = m[2];
+    let dataName = prefix + "SkidData" + suffix;
+    if (wb.SheetNames.includes(dataName)) {
       const sideLabel = suffix === "" || suffix === "1" ? "" : (suffix === "2" ? "-Achterkant" : "-" + suffix);
-      found.push({ skidType: m[1] + sideLabel, skidSheetName: n, skidDataSheetName: m[1] + "SkidData" + suffix });
+      found.push({ skidType: prefix + sideLabel, skidSheetName: n, skidDataSheetName: dataName });
+      continue;
     }
+    // Sommige exports (bv. "Flexprimer L2-skid") hebben een SkidData-tabblad waarvan de naam niet
+    // exact overeenkomt met het Skid-tabblad (bv. "LSkid" hoort bij "L2SkidData" i.p.v. het verwachte
+    // "LSkidData"). Val in dat geval terug op het enige tabblad dat met dezelfde prefix begint en op
+    // "SkidData" (evt. gevolgd door cijfers) eindigt, en gebruik het cijfer van dát tabblad als het
+    // echte skid-type (bv. "L2" i.p.v. "L") — dit is geen voor-/achterkant-variant maar een apart
+    // skid-type, dus geen "-Achterkant"-label en een eigen plaatje/markers in skidLayouts.
+    const altRe = new RegExp("^(" + reEscape(prefix) + ")(\\d*)SkidData(\\d*)$", "i");
+    const alt = wb.SheetNames.filter((s) => altRe.test(s));
+    if (alt.length !== 1) continue;
+    dataName = alt[0];
+    const altMatch = altRe.exec(dataName);
+    const dataSuffix = altMatch[2];
+    found.push({ skidType: prefix + dataSuffix, skidSheetName: n, skidDataSheetName: dataName });
   }
   return found.length ? found : null;
 }
@@ -1358,7 +1374,7 @@ function findSkidSheets(wb) {
 // "Data"-overzichtblad dat bij deze skid-zijde hoort (bij één zijde heet dit gewoon "Data", bij
 // meerdere zijdes maakt Excel er bv. "Data (2)" van; de naam zelf doet er dus niet toe).
 function findAnchorDataSheet(wb, skidSheetName) {
-  const marker = skidSheetName + "!";
+  const marker = sheetRefRegex(skidSheetName);
   for (const n of wb.SheetNames) {
     const ws = wb.Sheets[n];
     if (!ws || !ws["!ref"]) continue;
@@ -1366,7 +1382,7 @@ function findAnchorDataSheet(wb, skidSheetName) {
     for (let r = range.s.r; r <= range.e.r; r++) {
       for (let c = range.s.c; c <= range.e.c; c++) {
         const cell = ws[XLSX.utils.encode_cell({ r, c })];
-        if (cell && cell.f && cell.f.indexOf(marker) !== -1) return n;
+        if (cell && cell.f && marker.test(cell.f)) return n;
       }
     }
   }
@@ -1377,13 +1393,41 @@ function reEscape(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-const LAAGDIK_MIN_CAL = -7;
-const LAAGDIK_MAX_CAL = 7;
+// OUD R1/QR1-sjabloon (vóór de huidige export-vorm, bv. "Glossy Clearcoat QR1"): "Data" verwijst niet
+// rechtstreeks naar de ruwe B:D-reeks in "<skid>", maar naar één losse cel daar — ofwel de gemiddelde
+// kolom ("=IF(SUM(B7:D7)>0,AVERAGE(B7:D7),\"\")"), ofwel de daarnaast gecorrigeerde kolom
+// ("=IF(E7<>\"\",E7-$E$3,\"\")" die op zijn beurt naar de gemiddelde kolom verwijst). Los dit één of
+// twee niveaus op tot de onderliggende ruwe-kolomstart + rij. Verwijder deze functie + het aanroeppunt
+// zodra alle laagdiktestrips-exports het huidige (rechtstreekse) formaat gebruiken.
+function resolveOldFormatSkidCell(skidWs, col, row0) {
+  let cell = skidWs[XLSX.utils.encode_cell({ r: row0, c: col })];
+  if (!cell || !cell.f) return null;
+  const correctedMatch = cell.f.match(/^IF\(([A-Z]+)(\d+)<>"",\1\2-\$[A-Z]+\$\d+,""\)$/);
+  if (correctedMatch) {
+    col = XLSX.utils.decode_col(correctedMatch[1]);
+    row0 = parseInt(correctedMatch[2], 10) - 1;
+    cell = skidWs[XLSX.utils.encode_cell({ r: row0, c: col })];
+    if (!cell || !cell.f) return null;
+  }
+  const avgMatch = cell.f.match(/^IF\(SUM\(([A-Z]+)(\d+):[A-Z]+\d+\)>0,AVERAGE\(\1\2:[A-Z]+\d+\),""\)$/);
+  if (!avgMatch) return null;
+  return { colStart: XLSX.utils.decode_col(avgMatch[1]), skidRow0: parseInt(avgMatch[2], 10) - 1 };
+}
+
+// Excel zet enkele quotes om een tabbladnaam in formules zodra die naam als prefix op een
+// celverwijzing lijkt (bv. "C2Skid" -> 'C2Skid'!..., omdat "C2" een geldige celref is), maar niet
+// altijd (bv. "CSkid" -> CSkid!...). Deze regex matcht dus met of zonder de quotes.
+function sheetRefRegex(sheetName) {
+  return new RegExp("'?" + reEscape(sheetName) + "'?!");
+}
+
+const LAAGDIK_MIN_CAL = -4;
+const LAAGDIK_MAX_CAL = 4;
 
 // Leest laagdiktestrips-data door de formuleketen Data -> <skid> -> <skid>Data te volgen (i.p.v. vaste
 // rij/kolom-aannames): elke positie-kolom in "Data" verwijst naar een rij in "<skid>", en die rij-formule
 // verwijst op zijn beurt naar de echte calibratie-rij en eerste meetrij in "<skid>Data". Calibratiewaardes
-// buiten -7..7 worden als 0 behandeld (fout/uitschieter) i.p.v. toegepast. De calibratierij zelf wordt
+// buiten -4..4 worden als 0 behandeld (fout/uitschieter) i.p.v. toegepast. De calibratierij zelf wordt
 // niet als aparte positie weergegeven — hij wordt alleen gebruikt om de andere rijen te corrigeren.
 function parseLaagdiktestrips(wb, skid) {
   const dataSheetName = findAnchorDataSheet(wb, skid.skidSheetName);
@@ -1397,18 +1441,21 @@ function parseLaagdiktestrips(wb, skid) {
 
   const range = XLSX.utils.decode_range(dataWs["!ref"]);
   // Zoek de eerste rij met een formule die naar "<skid>!" verwijst; alles erboven is header.
+  const skidRefMarker = sheetRefRegex(skid.skidSheetName);
   let firstDataRow = -1;
   for (let r = range.s.r; r <= range.e.r; r++) {
     const cell = dataWs[XLSX.utils.encode_cell({ r, c: range.s.c })];
-    if (cell && cell.f && cell.f.indexOf(skid.skidSheetName + "!") !== -1) { firstDataRow = r; break; }
+    if (cell && cell.f && skidRefMarker.test(cell.f)) { firstDataRow = r; break; }
   }
   if (firstDataRow === -1) throw new Error(`geen meetformules gevonden in tabblad "${dataSheetName}"`);
   const codeRow = Math.max(range.s.r, firstDataRow - 3);
   const numberRow = codeRow + 1;
 
-  const formulaRe = new RegExp(reEscape(skid.skidSheetName) + "!([A-Z]+)(\\d+):[A-Z]+\\d+");
+  const skidRef = "'?" + reEscape(skid.skidSheetName) + "'?";
+  const skidDataRef = "'?" + reEscape(skid.skidDataSheetName) + "'?";
+  const formulaRe = new RegExp(skidRef + "!([A-Z]+)(\\d+):[A-Z]+\\d+");
   const chainRe = new RegExp(
-    reEscape(skid.skidDataSheetName) + "!([A-Z]+)(\\d+)-" + reEscape(skid.skidDataSheetName) + "!\\1\\$(\\d+)"
+    skidDataRef + "!([A-Z]+)(\\d+)-" + skidDataRef + "!\\1\\$(\\d+)"
   );
 
   const labels = [];
@@ -1421,9 +1468,20 @@ function parseLaagdiktestrips(wb, skid) {
 
     const fCell = dataWs[XLSX.utils.encode_cell({ r: firstDataRow, c })];
     const m = fCell && fCell.f && fCell.f.match(formulaRe);
-    if (!m) { positions.push(null); continue; }
-    const colStart = XLSX.utils.decode_col(m[1]);
-    const skidRow0 = parseInt(m[2], 10) - 1;
+    let colStart, skidRow0;
+    if (m) {
+      colStart = XLSX.utils.decode_col(m[1]);
+      skidRow0 = parseInt(m[2], 10) - 1;
+    } else {
+      // Geen rechtstreekse B:D-range gevonden: probeer het oude R1/QR1-sjabloon (zie
+      // resolveOldFormatSkidCell hierboven) waar "Data" naar één losse cel in "<skid>" verwijst.
+      const singleCellRe = new RegExp(skidRef + "!([A-Z]+)(\\d+)");
+      const om = fCell && fCell.f && fCell.f.match(singleCellRe);
+      const resolved = om && resolveOldFormatSkidCell(skidWs, XLSX.utils.decode_col(om[1]), parseInt(om[2], 10) - 1);
+      if (!resolved) { positions.push(null); continue; }
+      colStart = resolved.colStart;
+      skidRow0 = resolved.skidRow0;
+    }
 
     const skidCell = skidWs[XLSX.utils.encode_cell({ r: skidRow0, c: colStart })];
     const cm = skidCell && skidCell.f && skidCell.f.match(chainRe);
@@ -1436,7 +1494,7 @@ function parseLaagdiktestrips(wb, skid) {
     let lastFormulaRow = firstDataRow;
     for (let r = firstDataRow + 1; r <= range.e.r; r++) {
       const cell = dataWs[XLSX.utils.encode_cell({ r, c })];
-      if (cell && cell.f && cell.f.indexOf(skid.skidSheetName + "!") !== -1) lastFormulaRow = r; else break;
+      if (cell && cell.f && skidRefMarker.test(cell.f)) lastFormulaRow = r; else break;
     }
     positions.push({
       colStart,
@@ -1455,7 +1513,7 @@ function parseLaagdiktestrips(wb, skid) {
   return { skidType: skid.skidType, labels, rows };
 }
 
-// Gemiddelde van de 3 kolommen van een positie (ruw - calibratie), calibratie buiten -7..7 geldt als 0.
+// Gemiddelde van de 3 kolommen van een positie (ruw - calibratie), calibratie buiten -4..4 geldt als 0.
 // Retourneert null als geen van de 3 kolommen op deze rij een numerieke meting bevat (lege rij).
 function laagdikCellValue(skidDataWs, colStart, calibRow0, row0) {
   const parts = [];
@@ -3114,6 +3172,7 @@ function buildOverviewRows() {
         id: m.testsetId,
         name: m.testsetName,
         date: m.date,
+        project: m.project,
         testType: m.testType,
         skidType,
         parts: m.parts,
@@ -3524,6 +3583,8 @@ function renderOverview() {
     const mkText = (text) => { const td = document.createElement("td"); td.textContent = text; return td; };
     tr.appendChild(mkText(row.id));
     tr.appendChild(mkText(fmtDate(row.date)));
+    tr.appendChild(mkText(row.project || ""));
+    tr.appendChild(mkText(row.description || ""));
 
     const sbgTd = document.createElement("td");
     const sbgInp = document.createElement("input");
@@ -3554,6 +3615,8 @@ function renderOverview() {
     okeTd.appendChild(okeBtn);
     tr.appendChild(okeTd);
 
+    tr.appendChild(mkText(row.lakgroep || ""));
+
     const partsTd = document.createElement("td");
     const partsInp = document.createElement("input");
     partsInp.type = "number";
@@ -3572,9 +3635,6 @@ function renderOverview() {
     batchInp.addEventListener("change", () => { row.batchNo = batchInp.value; updateTestsetField(row.id, "batch_no", batchInp.value); });
     batchTd.appendChild(batchInp);
     tr.appendChild(batchTd);
-
-    tr.appendChild(mkText(row.description || ""));
-    tr.appendChild(mkText(row.lakgroep || ""));
 
     tr.addEventListener("click", () => openOverviewTestset(row.id));
     overviewBody.appendChild(tr);
