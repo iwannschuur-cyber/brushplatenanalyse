@@ -1701,9 +1701,9 @@ function refreshDatalists() {
   const projects = new Set();
   const lijnen = new Set(LIJN_DEFAULTS);
   if (appDb) {
-    const kres = appDb.exec("SELECT nummer, naam, leverancier, lakgroep FROM kleur");
+    const kres = appDb.exec("SELECT nummer, naam, leverancier, lakgroep, min_thickness, max_thickness FROM kleur");
     if (kres.length) {
-      kres[0].values.forEach((r) => { kleurMap[kleurKey(r[0])] = { naam: r[1] || "", leverancier: r[2] || "", lakgroep: r[3] || "" }; });
+      kres[0].values.forEach((r) => { kleurMap[kleurKey(r[0])] = { naam: r[1] || "", leverancier: r[2] || "", lakgroep: r[3] || "", minThickness: r[4], maxThickness: r[5] }; });
     }
     const tres = appDb.exec("SELECT DISTINCT project, lijn FROM testset");
     if (tres.length) {
@@ -1857,6 +1857,8 @@ function fillTsTable(tableEl, list = datasets, layerConfig = null) {
         lakInp.placeholder = "bijv. Lakgroep A";
 
         const kleurTarget = collapseToOneRow ? layerConfig : (l || layerConfig || {});
+        // Vast id zodat showSaveTestsetModal() bij laagdiktestrips live kan meeluisteren voor de min/max-autofill.
+        if (collapseToOneRow) kleurInp.id = "tsKleurnrShared";
         kleurInp.value = kleurTarget.kleurnummer ?? "";
         naamInp.value = kleurTarget.kleurNaam ?? "";
         levInp.value = kleurTarget.kleurLeverancier ?? "";
@@ -2720,6 +2722,20 @@ async function showSaveTestsetModal() {
   const mdMaxI = box.querySelector("#mdMax");
   mdMinI.value = testset.minThickness || "35";
   mdMaxI.value = testset.maxThickness || "45";
+  // Vult min/max automatisch aan als er een bekende kleurgroep-standaard bestaat voor het (live) ingetypte kleurnummer.
+  const bindKleurnrAutofill = () => {
+    if (!isLaagdik) return;
+    const shared = mdTable.querySelector("#tsKleurnrShared");
+    if (!shared) return;
+    shared.addEventListener("input", () => {
+      const known = kleurMap[kleurKey(shared.value)];
+      if (known && known.minThickness != null && known.maxThickness != null) {
+        mdMinI.value = known.minThickness;
+        mdMaxI.value = known.maxThickness;
+      }
+    });
+  };
+  bindKleurnrAutofill();
   nameI.value = testset.name || "";
   descI.value = testset.description || "";
   projectI.value = testset.project || "";
@@ -2740,10 +2756,12 @@ async function showSaveTestsetModal() {
   numLayersI.addEventListener("input", () => {
     layerConfig.numLayers = Math.max(1, parseInt(numLayersI.value, 10) || 1);
     fillTsTable(mdTable, datasets, layerConfig);
+    bindKleurnrAutofill();
   });
   sameLayersI.addEventListener("change", () => {
     layerConfig.sameLayerSettings = sameLayersI.checked;
     fillTsTable(mdTable, datasets, layerConfig);
+    bindKleurnrAutofill();
   });
   nameI.focus();
 
@@ -2867,7 +2885,7 @@ const SCHEMA_SQL =
   "skid_type TEXT, parts INTEGER, batch_no TEXT, oke INTEGER DEFAULT 1);" +
   "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY AUTOINCREMENT, testset_id INTEGER, position INTEGER, " +
   "name TEXT, color TEXT, programma TEXT, fm REAL, ll1 REAL, ll2 REAL, rpm REAL, oke INTEGER DEFAULT 1, values_json TEXT);" +
-  "CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT, lakgroep TEXT);" +
+  "CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT, lakgroep TEXT, min_thickness REAL, max_thickness REAL);" +
   "CREATE TABLE IF NOT EXISTS view (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, project TEXT, mode TEXT, items_json TEXT, created_at TEXT);" +
   "CREATE TABLE IF NOT EXISTS layer (id INTEGER PRIMARY KEY AUTOINCREMENT, test_id INTEGER NOT NULL, layer_index INTEGER NOT NULL, " +
   "programma TEXT, fm REAL, ll1 REAL, ll2 REAL, rpm REAL, kleurnummer REAL);" +
@@ -2901,10 +2919,12 @@ function migrateSchema(db) {
   const tNames = tCols.length ? tCols[0].values.map((r) => r[1]) : [];
   if (!tNames.includes("oke")) db.run("ALTER TABLE test ADD COLUMN oke INTEGER DEFAULT 1");
 
-  db.run("CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT, lakgroep TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS kleur (nummer TEXT PRIMARY KEY, naam TEXT, leverancier TEXT, lakgroep TEXT, min_thickness REAL, max_thickness REAL)");
   const kCols = db.exec("PRAGMA table_info(kleur)");
   const kNames = kCols.length ? kCols[0].values.map((r) => r[1]) : [];
   if (kNames.length && !kNames.includes("lakgroep")) db.run("ALTER TABLE kleur ADD COLUMN lakgroep TEXT");
+  if (kNames.length && !kNames.includes("min_thickness")) db.run("ALTER TABLE kleur ADD COLUMN min_thickness REAL");
+  if (kNames.length && !kNames.includes("max_thickness")) db.run("ALTER TABLE kleur ADD COLUMN max_thickness REAL");
   db.run("CREATE TABLE IF NOT EXISTS view (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, project TEXT, mode TEXT, items_json TEXT, created_at TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS layer (id INTEGER PRIMARY KEY AUTOINCREMENT, test_id INTEGER NOT NULL, layer_index INTEGER NOT NULL, " +
     "programma TEXT, fm REAL, ll1 REAL, ll2 REAL, rpm REAL, kleurnummer REAL)");
@@ -3006,6 +3026,7 @@ async function saveToDatabase() {
     stmt.free();
 
     upsertKleur();
+    await syncThicknessDefault(id);
 
     const persisted = await persistDb();
     resetMeasFilters();
@@ -3042,6 +3063,53 @@ function upsertKleurValues(nummer, naam, leverancier, lakgroep) {
     "INSERT INTO kleur (nummer, naam, leverancier, lakgroep) VALUES (?, ?, ?, ?) " +
     "ON CONFLICT(nummer) DO UPDATE SET naam = excluded.naam, leverancier = excluded.leverancier, lakgroep = excluded.lakgroep",
     [key, n, lev, lak]
+  );
+}
+
+// Slaat de min/max-laagdiktestandaard voor een kleurnummer op (los van naam/leverancier/lakgroep).
+function upsertKleurThickness(key, min, max) {
+  if (!key) return;
+  appDb.run(
+    "INSERT INTO kleur (nummer, min_thickness, max_thickness) VALUES (?, ?, ?) " +
+    "ON CONFLICT(nummer) DO UPDATE SET min_thickness = excluded.min_thickness, max_thickness = excluded.max_thickness",
+    [key, min, max]
+  );
+  if (!kleurMap[key]) kleurMap[key] = { naam: "", leverancier: "", lakgroep: "" };
+  kleurMap[key].minThickness = min;
+  kleurMap[key].maxThickness = max;
+}
+
+// Vergelijkt de min/max van deze testset met de kleurgroep-standaard; bij een afwijking vraagt
+// het de gebruiker of dit alleen voor deze testset geldt of voor alle testsets met dit kleurnummer.
+async function syncThicknessDefault(testsetId) {
+  if (normalizeTestType(testset.testType) !== "laagdiktestrips") return;
+  const key = kleurKey(testset.kleurnummer);
+  if (!key) return;
+  const newMin = toNum(testset.minThickness);
+  const newMax = toNum(testset.maxThickness);
+  const old = kleurMap[key];
+  const hasOld = old && old.minThickness != null && old.maxThickness != null;
+
+  if (!hasOld) {
+    upsertKleurThickness(key, newMin, newMax);
+    return;
+  }
+  if (old.minThickness === newMin && old.maxThickness === newMax) return;
+
+  const choice = await chooseDialog({
+    title: "Laagdikte-standaard aanpassen?",
+    message: "Kleurnummer " + testset.kleurnummer + " gebruikt momenteel " + old.minThickness + "\u2013" + old.maxThickness +
+      " \u00b5m als standaard.\nWil je " + newMin + "\u2013" + newMax + " \u00b5m toepassen op alle testsets met dit " +
+      "kleurnummer, of alleen op deze testset?",
+    addText: "Alleen deze testset",
+    replaceText: "Alle testsets met dit kleurnummer",
+  });
+  if (choice !== "replace") return;
+
+  upsertKleurThickness(key, newMin, newMax);
+  appDb.run(
+    "UPDATE testset SET min_thickness = ?, max_thickness = ? WHERE test_type = 'laagdiktestrips' AND kleurnummer = ? AND id != ?",
+    [newMin, newMax, toNum(testset.kleurnummer), testsetId]
   );
 }
 
