@@ -626,9 +626,9 @@ else if (typeof exports === 'object'){
     .chart-wrap { height: clamp(300px, 58vh, 620px); }
   }
 
-  /* Linker tab-rij: Overview, Views, Report naast elkaar, linksboven */
+  /* Tab-rij: Overview, Views, Report naast elkaar, linksboven; scrollt mee met de pagina. */
   #leftTabs {
-    position: fixed; top: 78px; left: 12px;
+    position: absolute; top: 78px; left: 12px;
     z-index: 60; display: flex; flex-direction: row; gap: 8px;
   }
   #leftTabs button {
@@ -2081,12 +2081,24 @@ function ldCellInfo(v, min, max) {
   return { cls, text: v.toFixed(1) };
 }
 
-// Bouwt de afbeelding-overlay-sectie (positie-markers met live data) voor één geladen bestand.
+// Bouwt de afbeelding-overlay-sectie(s) voor één geladen bestand: altijd de voorkant-layout, en als
+// hasAchterkant gezet is (via de "+ Achterkant toevoegen"-knop) ook een losse achterkant-layout met
+// een eigen plaatje/markers — beide lezen uit dezelfde al ingeladen grid.rows/labels, er komt geen
+// aparte dataset of extra meetdata bij.
 // Retourneert null als dit bestand geen skid-type heeft (bv. oudere database-records van vóór deze functie).
 function buildLayoutSection(d, grid, min, max) {
-  const skidType = grid.skidType;
-  if (!skidType) return null;
-  const isEditing = layoutEdit && layoutEdit.datasetRef === d;
+  if (!grid.skidType) return null;
+  const wrap = document.createElement("div");
+  wrap.appendChild(buildOneLayoutBlock(d, grid, grid.skidType, min, max, true));
+  if (grid.hasAchterkant) {
+    wrap.appendChild(buildOneLayoutBlock(d, grid, grid.skidType + "-Achterkant", min, max, false));
+  }
+  return wrap;
+}
+
+// Bouwt één losse layout-sectie (voorkant of achterkant) voor skid-type "skidType", met data uit "grid".
+function buildOneLayoutBlock(d, grid, skidType, min, max, allowAddBack) {
+  const isEditing = layoutEdit && layoutEdit.datasetRef === d && layoutEdit.skidType === skidType;
   const saved = skidLayouts[skidType];
   const imageUrl = isEditing ? (layoutEdit.previewUrl || (saved && saved.imageUrl) || null) : ((saved && saved.imageUrl) || null);
   const markers = isEditing ? layoutEdit.markers : (saved ? saved.markers : []);
@@ -2165,6 +2177,20 @@ function buildLayoutSection(d, grid, min, max) {
       }
     });
     toolbar.appendChild(editBtn);
+
+    // Niet elk skid-type heeft een achterkant nodig; daarom alleen op aanvraag via deze knop toevoegen
+    // (zelfde ingeladen meetdata, alleen een eigen plaatje + eigen marker-posities voor de achterkant).
+    if (allowAddBack && !grid.hasAchterkant) {
+      const backBtn = document.createElement("button");
+      backBtn.textContent = "+ Achterkant toevoegen";
+      backBtn.title = "Voegt een eigen achterkant-plaatje toe; de posities gebruiken dezelfde al ingeladen meetdata.";
+      backBtn.addEventListener("click", () => {
+        grid.hasAchterkant = true;
+        datasetsSaved = false;
+        renderLaagdikTabel();
+      });
+      toolbar.appendChild(backBtn);
+    }
   }
 
   if (!imageUrl) {
