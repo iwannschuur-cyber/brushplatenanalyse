@@ -487,13 +487,14 @@ else if (typeof exports === 'object'){
   .ld-layout-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
   .ld-layout-toolbar .hint { font-size: 12px; color: var(--muted); }
   .ld-layout-empty { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
-  .ld-layout-canvas { position: relative; display: inline-block; max-width: 100%; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; }
-  .ld-layout-canvas img { display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+  /* width (i.p.v. max-width) zodat voor- en achterkant altijd even breed worden getoond, ongeacht de eigen natuurlijke resolutie van elke afbeelding; max-width + margin:auto houdt 'm wat kleiner en gecentreerd. */
+  .ld-layout-canvas { position: relative; display: block; width: 100%; max-width: 1350px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; }
+  .ld-layout-canvas img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
   .ld-fs-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 9999;
     display: flex; align-items: center; justify-content: center; padding: 24px;
   }
-  .ld-fs-canvas { max-width: 96vw; max-height: 92vh; }
+  .ld-fs-canvas { display: inline-block; width: auto; max-width: 96vw; max-height: 92vh; }
   .ld-fs-canvas img { max-width: 96vw; max-height: 92vh; width: auto; height: auto; }
   .ld-fs-close {
     position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,.15); color: #fff;
@@ -2090,6 +2091,13 @@ function buildLayoutSection(d, grid, min, max) {
   if (!grid.skidType) return null;
   const wrap = document.createElement("div");
   wrap.appendChild(buildOneLayoutBlock(d, grid, grid.skidType, min, max, true));
+  // Zodra er ergens (voor dit skid-type, ongeacht welke testset) al een achterkant-layout is
+  // aangemaakt, hoeft dat niet opnieuw per testset met de knop toegevoegd te worden — automatisch tonen.
+  const achterkant = skidLayouts[grid.skidType + "-Achterkant"];
+  if (!grid.hasAchterkant && achterkant && (achterkant.imageUrl || (achterkant.markers && achterkant.markers.length))) {
+    grid.hasAchterkant = true;
+    datasetsSaved = false;
+  }
   if (grid.hasAchterkant) {
     wrap.appendChild(buildOneLayoutBlock(d, grid, grid.skidType + "-Achterkant", min, max, false));
   }
@@ -2350,10 +2358,14 @@ function openLayoutFullscreen(skidType, imageUrl, grid, markers, min, max) {
 // marker (in %), zodat de sleep-clamp rekening houdt met rotatie i.p.v. alleen de ongedraaide
 // hoek — anders kan een gedraaide (bv. 90°) rechthoekige marker de rand van de afbeelding niet
 // bereiken omdat de rotatie om het midden draait en de ongedraaide hoek geclampt werd.
-function rotatedHalfExtents(wPct, hPct, deg) {
+// wPct/hPct zijn percentages van resp. de breedte en hoogte van de afbeelding; bij een niet-vierkante
+// afbeelding (bv. een brede, platte skid-foto) moeten die twee eerst naar dezelfde (pixel-)eenheid
+// omgerekend worden via "aspect" (breedte/hoogte in px), anders klopt de klem bij 90°/270° niet en
+// kon een gedraaide marker links/rechts niet tot de rand komen terwijl boven/onder dat wél lukte.
+function rotatedHalfExtents(wPct, hPct, deg, aspect) {
   const rad = ((deg || 0) * Math.PI) / 180;
   const c = Math.abs(Math.cos(rad)), s = Math.abs(Math.sin(rad));
-  return { halfW: (wPct * c + hPct * s) / 2, halfH: (wPct * s + hPct * c) / 2 };
+  return { halfW: (wPct * c + (hPct / aspect) * s) / 2, halfH: (wPct * aspect * s + hPct * c) / 2 };
 }
 
 // Koppelt slepen/resizen/roteren/verwijderen aan een marker-element in edit-modus. Werkt in
@@ -2366,12 +2378,13 @@ function attachMarkerInteractions(markerEl, canvasEl, marker, resizeHandle, mark
     e.preventDefault();
     markerEl.focus();
     const rect = canvasEl.getBoundingClientRect();
+    const aspect = rect.width / rect.height;
     const startX = e.clientX, startY = e.clientY;
     const startXPct = marker.xPct, startYPct = marker.yPct;
     function onMove(ev) {
       const nx = startXPct + ((ev.clientX - startX) / rect.width) * 100;
       const ny = startYPct + ((ev.clientY - startY) / rect.height) * 100;
-      const { halfW, halfH } = rotatedHalfExtents(marker.wPct, marker.hPct, marker.rotationDeg);
+      const { halfW, halfH } = rotatedHalfExtents(marker.wPct, marker.hPct, marker.rotationDeg, aspect);
       const cx = nx + marker.wPct / 2, cy = ny + marker.hPct / 2;
       const clampedCx = halfW * 2 > 100 ? 50 : Math.max(halfW, Math.min(100 - halfW, cx));
       const clampedCy = halfH * 2 > 100 ? 50 : Math.max(halfH, Math.min(100 - halfH, cy));
